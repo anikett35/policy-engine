@@ -1,17 +1,3 @@
-"""
-AI Policy Generator — Groq API (Free)
-=======================================
-Uses Groq's free tier — 14,400 requests/day, no credit card needed.
-Model: LLaMA 3.3 70B — fast and excellent at structured JSON output.
-
-Setup:
-    1. Go to https://console.groq.com
-    2. Sign up with email (free)
-    3. Go to API Keys → Create API Key
-    4. Add to .env:  GROQ_API_KEY=gsk_your_key_here
-    5. Restart backend: python -m uvicorn main:app --reload
-"""
-
 import os
 import json
 import httpx

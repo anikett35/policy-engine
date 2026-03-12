@@ -1,17 +1,4 @@
-"""
-ML Smart Rule Suggester Service
-================================
-Analyzes past evaluation data using Decision Tree + Random Forest
-to automatically suggest rule conditions when building policies.
 
-Algorithm Overview:
-    1. Load past evaluations from MongoDB
-    2. Extract numeric and string features from input_data
-    3. Train a Random Forest (10 Decision Trees) on features + decisions
-    4. Extract feature importance and optimal split thresholds
-    5. Analyze string fields using frequency-based dominant decision
-    6. Return ranked rule suggestions with confidence scores
-"""
 
 import math
 from collections import defaultdict, Counter

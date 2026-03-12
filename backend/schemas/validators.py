@@ -1,9 +1,3 @@
-"""
-Pydantic Schemas for Request/Response Validation
-=================================================
-Centralized schema definitions used across all routes.
-"""
-
 import re
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field, field_validator

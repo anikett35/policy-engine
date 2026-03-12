@@ -1,15 +1,10 @@
-"""
-Shared Validators — Policy Rules Evaluation Engine
-====================================================
-Centralized validation utilities used across all routes.
-Industry-grade: field-level errors, detailed messages, reusable.
-"""
+
 
 import re
 from typing import Any, Dict, List, Optional
 from fastapi import HTTPException
 
-# ── Constants ──────────────────────────────────────────────────────────────────
+
 
 VALID_CATEGORIES = [
     "Compliance", "Security", "Financial",
@@ -47,7 +42,7 @@ MAX_PASSWORD_LEN    = 128
 MAX_PROMPT_LEN      = 2000
 
 
-# ── Helper ─────────────────────────────────────────────────────────────────────
+
 
 def _raise(status: int, msg: str, field: str = None):
     detail = {"message": msg}
@@ -56,14 +51,10 @@ def _raise(status: int, msg: str, field: str = None):
     raise HTTPException(status_code=status, detail=detail)
 
 
-def is_valid_object_id(value: str) -> bool:
-    """MongoDB ObjectId is 24-char hex string."""
-    return bool(re.fullmatch(r"[a-fA-F0-9]{24}", value or ""))
+def is_valid_object_id(value: str) -> bool:\n    return bool(re.fullmatch(r"[a-fA-F0-9]{24}", value or ""))
 
 
-def sanitize_string(value: str) -> str:
-    """Strip leading/trailing whitespace."""
-    return value.strip() if isinstance(value, str) else value
+def sanitize_string(value: str) -> str:\n    return value.strip() if isinstance(value, str) else value
 
 
 # ── Policy Validators ──────────────────────────────────────────────────────────

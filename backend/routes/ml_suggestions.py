@@ -1,14 +1,3 @@
-"""
-ML Rule Suggestions — API Routes
-==================================
-Exposes the Smart Rule Suggester as REST endpoints.
-
-Routes:
-    GET  /api/ml/suggest          - Generate rule suggestions from all evaluations
-    GET  /api/ml/suggest?policy_id - Generate suggestions filtered by policy
-    GET  /api/ml/status           - Check model training status and data availability
-"""
-
 from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import Optional
 from collections import Counter
