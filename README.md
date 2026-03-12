@@ -4,29 +4,23 @@
 **Stack:** Python FastAPI + React + MongoDB
 
 ---
+## Features
 
-## Project Structure
+- **Authentication** — Register/Login with JWT, roles: admin/analyst
+- **Policy Management** — Create, update, delete policies with status/versioning
+- **Rule Builder** — Visual rule builder with conditions, operators, logic (AND/OR), actions
+- **Rule Engine** — Python-based evaluation engine supporting 10+ operators
+- **Evaluate** — Run input JSON data against any policy, see per-rule results
+- **Dashboard** — Stats, pie charts, recent evaluations
+- **Audit Logs** — Every action is logged with actor, timestamp, details
 
-```
-policy-engine/
-├── frontend/          # React + Vite + Tailwind
-│   ├── src/
-│   │   ├── pages/     # Dashboard, Policies, Rules, Evaluate, Evaluations, Logs, Login
-│   │   ├── components/# Layout, Sidebar
-│   │   ├── api/       # Axios instance + API endpoints
-│   │   ├── store/     # Zustand auth store
-│   │   └── App.jsx
-│   └── package.json
-│
-└── backend/           # Python FastAPI
-    ├── main.py
-    ├── routes/        # auth, policies, rules, evaluations, logs
-    ├── models/        # User, Policy, Rule, Evaluation, AuditLog (MongoDB/Beanie)
-    ├── services/      # rule_engine.py — core evaluation logic
-    ├── config/        # database.py
-    └── requirements.txt
-```
+## Supported Operators
+`equals`, `not_equals`, `greater_than`, `less_than`, `contains`, `not_contains`, `in`, `not_in`, `is_null`, `is_not_null`
 
+## Decision Types
+- **allow** — Input passes the policy
+- **deny** — Input is rejected (deny takes highest priority)  
+- **flag** — Input is flagged for review
 ---
 
 ## Tech Stack
@@ -67,22 +61,32 @@ npm run dev
 App: http://localhost:5173
 
 ---
+## Project Structure
 
-## Features
+```
+policy-engine/
+├── frontend/          # React + Vite + Tailwind
+│   ├── src/
+│   │   ├── pages/     # Dashboard, Policies, Rules, Evaluate, Evaluations, Logs, Login
+│   │   ├── components/# Layout, Sidebar
+│   │   ├── api/       # Axios instance + API endpoints
+│   │   ├── store/     # Zustand auth store
+│   │   └── App.jsx
+│   └── package.json
+│
+└── backend/           # Python FastAPI
+    ├── main.py
+    ├── routes/        # auth, policies, rules, evaluations, logs
+    ├── models/        # User, Policy, Rule, Evaluation, AuditLog (MongoDB/Beanie)
+    ├── services/      # rule_engine.py — core evaluation logic
+    ├── config/        # database.py
+    └── requirements.txt
+```
+---
 
-- **Authentication** — Register/Login with JWT, roles: admin/analyst
-- **Policy Management** — Create, update, delete policies with status/versioning
-- **Rule Builder** — Visual rule builder with conditions, operators, logic (AND/OR), actions
-- **Rule Engine** — Python-based evaluation engine supporting 10+ operators
-- **Evaluate** — Run input JSON data against any policy, see per-rule results
-- **Dashboard** — Stats, pie charts, recent evaluations
-- **Audit Logs** — Every action is logged with actor, timestamp, details
+##Project Status
 
-## Supported Operators
-`equals`, `not_equals`, `greater_than`, `less_than`, `contains`, `not_contains`, `in`, `not_in`, `is_null`, `is_not_null`
+Active development. Core rule evaluation engine, authentication, and audit logging are fully functional. Frontend dashboard and rule builder are operational. Ongoing work on extending operator support and UI enhancements.
 
-## Decision Types
-- **allow** — Input passes the policy
-- **deny** — Input is rejected (deny takes highest priority)  
-- **flag** — Input is flagged for review
+---
 # policy-engine
