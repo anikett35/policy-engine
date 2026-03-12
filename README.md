@@ -84,7 +84,7 @@ policy-engine/
 ```
 ---
 
-##Project Status
+## Project Status
 
 Active development. Core rule evaluation engine, authentication, and audit logging are fully functional. Frontend dashboard and rule builder are operational. Ongoing work on extending operator support and UI enhancements.
 
