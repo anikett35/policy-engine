@@ -3,34 +3,47 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getPolicies, createPolicy, deletePolicy } from '../api/endpoints'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { Plus, Trash2, ChevronRight, Shield, Tag, X, Search, Filter, FolderOpen } from 'lucide-react'
+import {
+  Plus, Trash2, ChevronRight, Shield, Tag, X, Search, FolderOpen,
+  Lock, Database, Key, HeartPulse, DollarSign, FileText
+} from 'lucide-react'
 
-const CATEGORIES = ['Compliance','Security','Data Governance','Access Control','Financial','Other']
+const CATEGORIES = ['Compliance', 'Security', 'Data Governance', 'Access Control', 'Financial', 'Other']
 
-const CAT_STYLE = {
-  'Compliance':       { bg:'rgba(99,102,241,0.1)',  text:'#a5b4fc', icon:'🔒' },
-  'Security':         { bg:'rgba(239,68,68,0.1)',   text:'#f87171', icon:'🛡️' },
-  'Data Governance':  { bg:'rgba(6,182,212,0.1)',   text:'#67e8f9', icon:'🗄️' },
-  'Access Control':   { bg:'rgba(245,158,11,0.1)',  text:'#fbbf24', icon:'🔑' },
-  'Financial':        { bg:'rgba(16,185,129,0.1)',  text:'#34d399', icon:'💰' },
-  'Other':            { bg:'rgba(100,116,139,0.1)', text:'#94a3b8', icon:'📋' },
+const CAT_META = {
+  Compliance:        { bg: '#eef2ff', text: '#3730a3', border: '#c7d2fe', Icon: Lock        },
+  Security:          { bg: '#fee2e2', text: '#991b1b', border: '#fca5a5', Icon: Shield      },
+  'Data Governance': { bg: '#e0f2fe', text: '#075985', border: '#bae6fd', Icon: Database    },
+  'Access Control':  { bg: '#fef9c3', text: '#854d0e', border: '#fde047', Icon: Key         },
+  Financial:         { bg: '#dcfce7', text: '#166534', border: '#bbf7d0', Icon: DollarSign  },
+  Other:             { bg: '#f3f4f6', text: '#374151', border: '#e4e7ed', Icon: FileText     },
 }
 
 export default function PoliciesPage() {
   const qc = useQueryClient()
   const { data: policies = [], isLoading } = useQuery({ queryKey: ['policies'], queryFn: getPolicies })
+
   const [showForm, setShowForm] = useState(false)
-  const [search, setSearch] = useState('')
+  const [search,   setSearch]   = useState('')
   const [catFilter, setCatFilter] = useState('')
-  const [form, setForm] = useState({ name:'', description:'', category:'Compliance', tags:'', status:'draft' })
+  const [form, setForm] = useState({
+    name: '', description: '', category: 'Compliance', tags: '', status: 'draft',
+  })
 
   const createMut = useMutation({
     mutationFn: createPolicy,
-    onSuccess: () => { qc.invalidateQueries(['policies']); setShowForm(false); setForm({ name:'', description:'', category:'Compliance', tags:'', status:'draft' }); toast.success('Policy created!') }
+    onSuccess: () => {
+      qc.invalidateQueries(['policies'])
+      setShowForm(false)
+      setForm({ name: '', description: '', category: 'Compliance', tags: '', status: 'draft' })
+      toast.success('Policy created!')
+    },
+    onError: () => toast.error('Failed to create policy.'),
   })
+
   const deleteMut = useMutation({
     mutationFn: deletePolicy,
-    onSuccess: () => { qc.invalidateQueries(['policies']); toast.success('Policy deleted') }
+    onSuccess: () => { qc.invalidateQueries(['policies']); toast.success('Policy deleted') },
   })
 
   const filtered = policies.filter(p => {
@@ -45,26 +58,40 @@ export default function PoliciesPage() {
   }
 
   return (
-    <div className="p-7 space-y-6 animate-fade-up">
+    <div style={{ padding: 28, background: '#f8f9fb', minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Policies</h1>
-          <p className="text-slate-500 text-sm mt-0.5">{policies.length} policies · {policies.filter(p=>p.status==='active').length} active</p>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Policies</h1>
+          <p style={{ color: '#6b7280', fontSize: 13, margin: '4px 0 0' }}>
+            {policies.length} total · {policies.filter(p => p.status === 'active').length} active
+          </p>
         </div>
-        <button className="btn-primary" onClick={() => setShowForm(true)}>
-          <Plus size={15} /> New Policy
+        <button
+          onClick={() => setShowForm(v => !v)}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#4f6ef7', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+        >
+          <Plus size={14} /> New Policy
         </button>
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3">
-        <div className="relative flex-1">
-          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-600" />
-          <input className="input pl-9" placeholder="Search policies..." value={search} onChange={e => setSearch(e.target.value)} />
+      <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search policies…"
+            style={{ width: '100%', paddingLeft: 36, padding: '9px 12px 9px 36px', background: '#fff', border: '1px solid #e4e7ed', borderRadius: 10, fontSize: 13, color: '#111827', outline: 'none', boxSizing: 'border-box' }}
+          />
         </div>
-        <select className="input w-48" value={catFilter} onChange={e => setCatFilter(e.target.value)}>
+        <select
+          value={catFilter}
+          onChange={e => setCatFilter(e.target.value)}
+          style={{ padding: '9px 12px', background: '#fff', border: '1px solid #e4e7ed', borderRadius: 10, fontSize: 13, color: '#374151', outline: 'none', minWidth: 170 }}
+        >
           <option value="">All Categories</option>
           {CATEGORIES.map(c => <option key={c}>{c}</option>)}
         </select>
@@ -72,116 +99,157 @@ export default function PoliciesPage() {
 
       {/* Create form */}
       {showForm && (
-        <div className="relative rounded-2xl p-6 animate-fade-up"
-          style={{ background:'linear-gradient(135deg,rgba(79,110,247,0.06),rgba(108,61,232,0.04))', border:'1px solid rgba(79,110,247,0.2)' }}>
-          <div className="absolute top-0 left-8 right-8 h-px" style={{ background:'linear-gradient(90deg,transparent,rgba(79,110,247,0.5),transparent)' }} />
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="font-bold text-white">Create New Policy</h3>
-            <button onClick={() => setShowForm(false)} className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-white hover:bg-white/10 transition-all">
-              <X size={14} />
+        <div style={{ background: '#fff', border: '1px solid #c7d2fe', borderRadius: 14, padding: 22, marginBottom: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: '#111827', margin: 0 }}>Create New Policy</h3>
+            <button onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', display: 'flex', alignItems: 'center' }}>
+              <X size={16} />
             </button>
           </div>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Policy Name</label>
-                <input className="input" placeholder="e.g. Loan Eligibility Policy" value={form.name}
-                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required />
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Policy Name</label>
+                <input
+                  required
+                  value={form.name}
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                  placeholder="e.g. Loan Eligibility Policy"
+                  style={{ width: '100%', padding: '9px 12px', background: '#f9fafb', border: '1px solid #e4e7ed', borderRadius: 9, fontSize: 13, color: '#111827', outline: 'none', boxSizing: 'border-box' }}
+                />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Category</label>
-                <select className="input" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Category</label>
+                <select
+                  value={form.category}
+                  onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                  style={{ width: '100%', padding: '9px 12px', background: '#f9fafb', border: '1px solid #e4e7ed', borderRadius: 9, fontSize: 13, color: '#374151', outline: 'none', boxSizing: 'border-box' }}
+                >
                   {CATEGORIES.map(c => <option key={c}>{c}</option>)}
                 </select>
               </div>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Description</label>
-              <textarea className="input min-h-[72px] resize-none" placeholder="What does this policy do?"
-                value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} required />
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Description</label>
+              <textarea
+                required
+                value={form.description}
+                onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                placeholder="What does this policy do?"
+                rows={3}
+                style={{ width: '100%', padding: '9px 12px', background: '#f9fafb', border: '1px solid #e4e7ed', borderRadius: 9, fontSize: 13, color: '#111827', outline: 'none', resize: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+              />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 18 }}>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Tags (comma separated)</label>
-                <input className="input" placeholder="loan, bank, kyc" value={form.tags}
-                  onChange={e => setForm(f => ({ ...f, tags: e.target.value }))} />
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Tags (comma separated)</label>
+                <input
+                  value={form.tags}
+                  onChange={e => setForm(f => ({ ...f, tags: e.target.value }))}
+                  placeholder="loan, bank, kyc"
+                  style={{ width: '100%', padding: '9px 12px', background: '#f9fafb', border: '1px solid #e4e7ed', borderRadius: 9, fontSize: 13, color: '#111827', outline: 'none', boxSizing: 'border-box' }}
+                />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Status</label>
-                <select className="input" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Status</label>
+                <select
+                  value={form.status}
+                  onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
+                  style={{ width: '100%', padding: '9px 12px', background: '#f9fafb', border: '1px solid #e4e7ed', borderRadius: 9, fontSize: 13, color: '#374151', outline: 'none', boxSizing: 'border-box' }}
+                >
                   <option value="draft">Draft</option>
                   <option value="active">Active</option>
                 </select>
               </div>
             </div>
-            <div className="flex gap-3 pt-2">
-              <button type="submit" disabled={createMut.isPending} className="btn-primary">
-                {createMut.isPending ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Creating...</> : <><Plus size={14} /> Create Policy</>}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="submit"
+                disabled={createMut.isPending}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#4f6ef7', color: '#fff', border: 'none', borderRadius: 9, padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: createMut.isPending ? 0.6 : 1 }}
+              >
+                {createMut.isPending
+                  ? <><div style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} /> Creating…</>
+                  : <><Plus size={13} /> Create Policy</>}
               </button>
-              <button type="button" className="btn-ghost" onClick={() => setShowForm(false)}>Cancel</button>
+              <button type="button" onClick={() => setShowForm(false)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent', color: '#6b7280', border: '1px solid #e4e7ed', borderRadius: 9, padding: '9px 16px', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+                Cancel
+              </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* Grid */}
+      {/* Policy grid */}
       {isLoading ? (
-        <div className="grid grid-cols-2 gap-4">
-          {[1,2,3,4].map(i => <div key={i} className="card h-36 animate-shimmer" />)}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} style={{ background: '#fff', border: '1px solid #e4e7ed', borderRadius: 14, height: 140, animation: 'shimmer 1.5s infinite' }} />
+          ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4 stagger">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
           {filtered.map(p => {
-            const cat = CAT_STYLE[p.category] || CAT_STYLE['Other']
+            const cat = CAT_META[p.category] || CAT_META.Other
+            const CatIcon = cat.Icon
             return (
-              <div key={p.id} className="group relative rounded-2xl p-5 cursor-pointer transition-all duration-200 animate-fade-up"
-                style={{ background:'linear-gradient(135deg,rgba(12,20,40,0.9),rgba(8,14,28,0.95))', border:'1px solid rgba(255,255,255,0.05)' }}
-                onMouseEnter={e => e.currentTarget.style.borderColor='rgba(79,110,247,0.25)'}
-                onMouseLeave={e => e.currentTarget.style.borderColor='rgba(255,255,255,0.05)'}>
+              <div
+                key={p.id}
+                style={{ background: '#fff', border: '1px solid #e4e7ed', borderRadius: 14, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', position: 'relative', overflow: 'hidden', transition: 'box-shadow 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 16px rgba(79,110,247,0.1)'}
+                onMouseLeave={e => e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'}
+              >
+                {/* Top accent */}
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: cat.bg, borderRadius: '14px 14px 0 0' }} />
 
-                {/* Top bar colored line */}
-                <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl transition-all duration-200"
-                  style={{ background:`linear-gradient(90deg,transparent,${cat.text},transparent)`, opacity:0.4 }} />
-
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg"
-                      style={{ background: cat.bg }}>
-                      {cat.icon}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 10, background: cat.bg, border: `1px solid ${cat.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <CatIcon size={17} color={cat.text} />
                     </div>
                     <div>
-                      <div className="font-bold text-white text-sm group-hover:text-indigo-200 transition-colors">{p.name}</div>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className={"badge badge-" + p.status}>{p.status}</span>
-                        <span className="text-[10px] text-slate-600 font-mono">v{p.version}</span>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>{p.name}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
+                        <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: p.status === 'active' ? '#dcfce7' : '#f3f4f6', color: p.status === 'active' ? '#166534' : '#6b7280' }}>
+                          {p.status}
+                        </span>
+                        <span style={{ fontSize: 10, color: '#9ca3af' }}>v{p.version}</span>
                       </div>
                     </div>
                   </div>
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={e => { e.stopPropagation(); deleteMut.mutate(p.id) }}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button
+                      onClick={e => { e.stopPropagation(); if (window.confirm('Delete this policy?')) deleteMut.mutate(p.id) }}
+                      style={{ width: 28, height: 28, borderRadius: 7, background: 'transparent', border: '1px solid #f3f4f6', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', transition: 'all 0.15s' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.color = '#dc2626'; e.currentTarget.style.borderColor = '#fca5a5' }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9ca3af'; e.currentTarget.style.borderColor = '#f3f4f6' }}
+                    >
                       <Trash2 size={13} />
                     </button>
-                    <Link to={`/policies/${p.id}`}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all">
+                    <Link
+                      to={`/policies/${p.id}`}
+                      style={{ width: 28, height: 28, borderRadius: 7, background: 'transparent', border: '1px solid #f3f4f6', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', textDecoration: 'none', transition: 'all 0.15s' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = '#eef2ff'; e.currentTarget.style.color = '#4f6ef7'; e.currentTarget.style.borderColor = '#c7d2fe' }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9ca3af'; e.currentTarget.style.borderColor = '#f3f4f6' }}
+                    >
                       <ChevronRight size={13} />
                     </Link>
                   </div>
                 </div>
 
-                <p className="text-xs text-slate-500 line-clamp-2 mb-3 leading-relaxed">{p.description}</p>
+                <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.55, marginBottom: 12, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  {p.description}
+                </p>
 
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-wrap gap-1">
-                    {p.tags?.slice(0,3).map(t => (
-                      <span key={t} className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium"
-                        style={{ background:'rgba(255,255,255,0.05)', color:'#64748b', border:'1px solid rgba(255,255,255,0.06)' }}>
-                        <Tag size={8} />{t}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    {p.tags?.slice(0, 3).map(t => (
+                      <span key={t} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, background: '#f9fafb', color: '#9ca3af', padding: '2px 8px', borderRadius: 20, border: '1px solid #f3f4f6' }}>
+                        <Tag size={8} /> {t}
                       </span>
                     ))}
                   </div>
-                  <span className="text-[10px] px-2 py-1 rounded-lg font-medium" style={{ background: cat.bg, color: cat.text }}>
+                  <span style={{ fontSize: 10, fontWeight: 600, background: cat.bg, color: cat.text, padding: '3px 9px', borderRadius: 20 }}>
                     {p.category}
                   </span>
                 </div>
@@ -189,15 +257,17 @@ export default function PoliciesPage() {
             )
           })}
 
-          {filtered.length === 0 && (
-            <div className="col-span-2 text-center py-20 text-slate-600">
-              <FolderOpen size={48} className="mx-auto mb-4 opacity-20" />
-              <p className="font-semibold text-slate-500">No policies found</p>
-              <p className="text-sm mt-1">Create your first policy to get started</p>
+          {filtered.length === 0 && !isLoading && (
+            <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px 0', color: '#9ca3af' }}>
+              <FolderOpen size={40} style={{ marginBottom: 12, opacity: 0.4 }} />
+              <p style={{ fontWeight: 600, color: '#6b7280', fontSize: 14, margin: '0 0 4px' }}>No policies found</p>
+              <p style={{ fontSize: 13, margin: 0 }}>Create your first policy to get started</p>
             </div>
           )}
         </div>
       )}
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </div>
   )
 }

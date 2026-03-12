@@ -5,109 +5,111 @@ import { getPolicy, getRules, createRule, deleteRule, getMLSuggestions } from '.
 import toast from 'react-hot-toast'
 import {
   Plus, Trash2, ChevronLeft, Layers, ArrowRight, X,
-  Settings2, Sparkles, Brain, AlertCircle,
-  CheckCircle, ChevronDown, ChevronUp, Zap, RefreshCw,
-  Info, Database
+  Settings2, Brain, AlertCircle, CheckCircle,
+  ChevronDown, ChevronUp, Zap, RefreshCw, Info, Database
 } from 'lucide-react'
 
-const OPERATORS   = ['equals','not_equals','greater_than','less_than','contains','not_contains','in','not_in','is_null','is_not_null']
+const OPERATORS    = ['equals','not_equals','greater_than','less_than','contains','not_contains','in','not_in','is_null','is_not_null']
 const ACTION_TYPES = ['allow','deny','flag','notify','transform']
-const emptyCondition = () => ({ field:'', operator:'equals', value:'', data_type:'string' })
-const emptyAction    = () => ({ type:'allow', message:'', parameters:{} })
+const emptyCondition = () => ({ field: '', operator: 'equals', value: '', data_type: 'string' })
+const emptyAction    = () => ({ type: 'allow', message: '', parameters: {} })
 
 const ACTION_META = {
-  allow:  { bg:'rgba(16,185,129,0.1)',  text:'#34d399', border:'rgba(16,185,129,0.25)', glow:'rgba(16,185,129,0.2)'  },
-  deny:   { bg:'rgba(239,68,68,0.1)',   text:'#f87171', border:'rgba(239,68,68,0.25)',  glow:'rgba(239,68,68,0.2)'   },
-  flag:   { bg:'rgba(245,158,11,0.1)',  text:'#fbbf24', border:'rgba(245,158,11,0.25)', glow:'rgba(245,158,11,0.2)'  },
-  notify: { bg:'rgba(99,102,241,0.1)',  text:'#a5b4fc', border:'rgba(99,102,241,0.25)', glow:'rgba(99,102,241,0.2)'  },
+  allow:  { bg: '#dcfce7', text: '#166534', border: '#bbf7d0' },
+  deny:   { bg: '#fee2e2', text: '#991b1b', border: '#fca5a5' },
+  flag:   { bg: '#fef9c3', text: '#854d0e', border: '#fde047' },
+  notify: { bg: '#eef2ff', text: '#3730a3', border: '#c7d2fe' },
+}
+
+const INPUT_STYLE = {
+  width: '100%', padding: '8px 11px', background: '#f9fafb',
+  border: '1px solid #e4e7ed', borderRadius: 9, fontSize: 13,
+  color: '#111827', outline: 'none', boxSizing: 'border-box',
 }
 
 // ── Confidence Bar ────────────────────────────────────────────
 function ConfidenceBar({ value }) {
-  const color = value >= 80 ? '#10b981' : value >= 60 ? '#f59e0b' : '#f87171'
+  const color = value >= 80 ? '#16a34a' : value >= 60 ? '#d97706' : '#dc2626'
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 rounded-full" style={{ background:'rgba(255,255,255,0.06)' }}>
-        <div className="h-full rounded-full transition-all duration-700"
-          style={{ width:`${value}%`, background:color, boxShadow:`0 0 6px ${color}` }} />
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ flex: 1, height: 5, background: '#f3f4f6', borderRadius: 99, overflow: 'hidden' }}>
+        <div style={{ width: `${value}%`, height: '100%', background: color, borderRadius: 99, transition: 'width 0.5s' }} />
       </div>
-      <span className="text-[11px] font-bold tabular-nums" style={{ color }}>{value}%</span>
+      <span style={{ fontSize: 11, fontWeight: 700, color, tabularNums: true, minWidth: 34 }}>{value}%</span>
     </div>
   )
 }
 
 // ── Suggestion Card ───────────────────────────────────────────
 function SuggestionCard({ suggestion, onApply, isApplied }) {
-  const meta = ACTION_META[suggestion.suggested_action] || ACTION_META['notify']
   const [expanded, setExpanded] = useState(false)
+  const meta = ACTION_META[suggestion.suggested_action] || ACTION_META.notify
+
   return (
-    <div className="relative rounded-2xl overflow-hidden transition-all duration-200"
-      style={{
-        background: isApplied
-          ? 'linear-gradient(135deg,rgba(16,185,129,0.08),rgba(16,185,129,0.04))'
-          : 'linear-gradient(135deg,rgba(15,25,50,0.9),rgba(8,14,30,0.95))',
-        border: isApplied ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(255,255,255,0.06)',
-      }}>
-      <div className="absolute top-0 left-0 right-0 h-px"
-        style={{ background:`linear-gradient(90deg,transparent,${meta.text}40,transparent)` }} />
-      <div className="p-4">
+    <div style={{
+      border: `1px solid ${isApplied ? '#bbf7d0' : '#e4e7ed'}`,
+      borderRadius: 12, background: isApplied ? '#f0fdf4' : '#fff',
+      overflow: 'hidden', transition: 'all 0.15s',
+    }}>
+      <div style={{ padding: '12px 14px' }}>
         {/* Header row */}
-        <div className="flex items-center gap-2 mb-2 flex-wrap">
-          <span className="text-[11px] font-mono font-bold px-2.5 py-1 rounded-lg"
-            style={{ background:'rgba(99,102,241,0.12)', color:'#a5b4fc', border:'1px solid rgba(99,102,241,0.2)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 11, fontFamily: 'monospace', background: '#eef2ff', color: '#3730a3', padding: '3px 8px', borderRadius: 6, border: '1px solid #e0e7ff' }}>
             {suggestion.field}
           </span>
-          <span className="text-xs text-slate-500">{suggestion.operator}</span>
-          <span className="text-xs font-bold text-white bg-white/[0.08] px-2 py-0.5 rounded-lg">{suggestion.value}</span>
-          <ArrowRight size={11} className="text-slate-600" />
-          <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg"
-            style={{ background:meta.bg, color:meta.text, border:`1px solid ${meta.border}` }}>
+          <span style={{ fontSize: 11, color: '#9ca3af' }}>{suggestion.operator}</span>
+          <span style={{ fontSize: 11, fontWeight: 700, background: '#f9fafb', color: '#111827', padding: '3px 8px', borderRadius: 6, border: '1px solid #e4e7ed' }}>
+            {suggestion.value}
+          </span>
+          <ArrowRight size={11} color="#9ca3af" />
+          <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 20, background: meta.bg, color: meta.text, border: `1px solid ${meta.border}` }}>
             {suggestion.suggested_action.toUpperCase()}
           </span>
           {isApplied && (
-            <span className="ml-auto flex items-center gap-1 text-[10px] font-semibold text-emerald-400">
+            <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: '#16a34a' }}>
               <CheckCircle size={11} /> Applied
             </span>
           )}
         </div>
+
         {/* Confidence */}
-        <div className="mb-2">
-          <div className="flex justify-between mb-1">
-            <span className="text-[10px] text-slate-600 uppercase tracking-wide font-semibold">ML Confidence</span>
-            <span className="text-[10px] text-slate-600">{suggestion.samples_affected} evaluations</span>
+        <div style={{ marginBottom: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+            <span style={{ fontSize: 10, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>ML Confidence</span>
+            <span style={{ fontSize: 10, color: '#9ca3af' }}>{suggestion.samples_affected} samples</span>
           </div>
           <ConfidenceBar value={suggestion.confidence} />
         </div>
-        {/* Reason + expand */}
-        <div className="flex items-start justify-between gap-2 mt-2">
-          <p className="text-[11px] text-slate-500 leading-relaxed flex-1">{suggestion.reason}</p>
-          <button onClick={() => setExpanded(e => !e)}
-            className="w-6 h-6 rounded-lg flex items-center justify-center text-slate-600 hover:text-slate-300 hover:bg-white/05 transition-all flex-shrink-0">
+
+        {/* Reason */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+          <p style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.5, margin: 0, flex: 1 }}>{suggestion.reason}</p>
+          <button
+            onClick={() => setExpanded(e => !e)}
+            style={{ width: 24, height: 24, borderRadius: 7, background: 'none', border: '1px solid #f3f4f6', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', flexShrink: 0 }}
+          >
             {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
           </button>
         </div>
-        {/* Expanded */}
+
+        {/* Expanded details */}
         {expanded && (
-          <div className="mt-3 pt-3 border-t border-white/[0.05] space-y-1.5">
-            {[['Feature Importance', `${suggestion.importance}%`, '#a5b4fc'],
-              ['Data Type', suggestion.data_type, '#94a3b8'],
-              ['Operator', suggestion.operator, '#94a3b8'],
-              ['Threshold', suggestion.value, '#fff']
-            ].map(([label, val, color]) => (
-              <div key={label} className="flex items-center justify-between text-[11px]">
-                <span className="text-slate-600">{label}</span>
-                <span className="font-semibold font-mono" style={{ color }}>{val}</span>
+          <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #f3f4f6', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {[['Feature Importance', `${suggestion.importance}%`], ['Data Type', suggestion.data_type], ['Threshold', suggestion.value]].map(([l, v]) => (
+              <div key={l} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                <span style={{ color: '#9ca3af' }}>{l}</span>
+                <span style={{ fontWeight: 600, color: '#374151', fontFamily: 'monospace' }}>{v}</span>
               </div>
             ))}
           </div>
         )}
+
         {/* Apply button */}
         {!isApplied && (
-          <button onClick={() => onApply(suggestion)}
-            className="mt-3 w-full py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center gap-2"
-            style={{ background:meta.bg, color:meta.text, border:`1px solid ${meta.border}` }}
-            onMouseEnter={e => e.currentTarget.style.boxShadow=`0 0 16px ${meta.glow}`}
-            onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
+          <button
+            onClick={() => onApply(suggestion)}
+            style={{ width: '100%', marginTop: 10, background: meta.bg, color: meta.text, border: `1px solid ${meta.border}`, borderRadius: 9, padding: '8px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, transition: 'opacity 0.15s' }}
+          >
             <Zap size={12} /> Apply as Rule Condition
           </button>
         )}
@@ -119,177 +121,127 @@ function SuggestionCard({ suggestion, onApply, isApplied }) {
 // ── ML Panel ──────────────────────────────────────────────────
 function MLSuggestionPanel({ policyId, onApply, appliedFields }) {
   const [open, setOpen] = useState(false)
+
   const { data: mlData, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['ml-suggestions', policyId],
     queryFn:  () => getMLSuggestions(policyId),
     enabled:  open,
     staleTime: 60_000,
   })
-  const suggestions  = mlData?.suggestions || []
-  const modelInfo    = mlData?.model_info  || {}
-  const status       = mlData?.status
-  const numericCount = mlData?.numeric_suggestions?.length || 0
-  const stringCount  = mlData?.string_suggestions?.length  || 0
+
+  const suggestions = mlData?.suggestions || []
+  const modelInfo   = mlData?.model_info  || {}
+  const status      = mlData?.status
 
   return (
-    <div className="rounded-2xl overflow-hidden"
-      style={{ border:'1px solid rgba(139,92,246,0.25)', background:'linear-gradient(135deg,rgba(139,92,246,0.05),rgba(79,110,247,0.03))' }}>
-
-      {/* Header */}
-      <button onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-3 px-5 py-4 text-left transition-all"
-        style={{ borderBottom: open ? '1px solid rgba(139,92,246,0.15)' : 'none' }}>
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 relative"
-          style={{ background:'linear-gradient(135deg,rgba(139,92,246,0.2),rgba(79,110,247,0.15))' }}>
-          <Brain size={18} className="text-violet-400" />
-          <div className="absolute top-0.5 right-0.5 w-2.5 h-2.5 rounded-full bg-violet-400 animate-pulse" />
+    <div style={{ border: '1px solid #c7d2fe', borderRadius: 14, overflow: 'hidden', background: '#fafbff' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', borderBottom: open ? '1px solid #e0e7ff' : 'none' }}
+      >
+        <div style={{ width: 40, height: 40, borderRadius: 12, background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' }}>
+          <Brain size={18} color="#4f6ef7" />
+          <div style={{ position: 'absolute', top: 2, right: 2, width: 8, height: 8, borderRadius: '50%', background: '#4f6ef7', border: '2px solid #fafbff' }} />
         </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-bold text-white text-sm">ML Smart Rule Suggestions</span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold"
-              style={{ background:'rgba(139,92,246,0.15)', color:'#c4b5fd', border:'1px solid rgba(139,92,246,0.25)' }}>
-              Random Forest
-            </span>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>ML Smart Rule Suggestions</span>
+            <span style={{ fontSize: 10, fontWeight: 700, background: '#eef2ff', color: '#4f6ef7', border: '1px solid #c7d2fe', padding: '2px 8px', borderRadius: 20 }}>Random Forest</span>
             {suggestions.length > 0 && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+              <span style={{ fontSize: 10, fontWeight: 700, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', padding: '2px 8px', borderRadius: 20 }}>
                 {suggestions.length} suggestions ready
               </span>
             )}
           </div>
-          <p className="text-[11px] text-slate-500 mt-0.5">
-            Past evaluations analyze करून AI automatically rule conditions suggest करतो
-          </p>
+          <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>AI analyzes past evaluations to suggest rule conditions automatically</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {open && (
-            <button onClick={e => { e.stopPropagation(); refetch() }} disabled={isFetching}
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-violet-400 hover:bg-violet-500/10 transition-all">
-              <RefreshCw size={13} className={isFetching ? 'animate-spin' : ''} />
+            <button
+              onClick={e => { e.stopPropagation(); refetch() }}
+              disabled={isFetching}
+              style={{ width: 28, height: 28, borderRadius: 8, background: '#fff', border: '1px solid #e4e7ed', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}
+            >
+              <RefreshCw size={12} style={{ animation: isFetching ? 'spin 0.7s linear infinite' : 'none' }} />
             </button>
           )}
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500">
-            {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </div>
+          <div style={{ color: '#9ca3af' }}>{open ? <ChevronUp size={15} /> : <ChevronDown size={15} />}</div>
         </div>
       </button>
 
-      {/* Body */}
       {open && (
-        <div className="p-5 space-y-4">
-
-          {/* Loading */}
+        <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
           {isLoading && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-5 h-5 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
-                <span className="text-sm text-slate-400">Random Forest training on past evaluations...</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 16, height: 16, border: '2px solid #4f6ef7', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                <span style={{ fontSize: 13, color: '#6b7280' }}>Training Random Forest on past evaluations…</span>
               </div>
-              {[1,2,3].map(i => (
-                <div key={i} className="h-24 rounded-2xl animate-shimmer"
-                  style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)' }} />
-              ))}
+              {[1, 2, 3].map(i => <div key={i} style={{ height: 80, background: '#f3f4f6', borderRadius: 10 }} />)}
             </div>
           )}
 
-          {/* Error */}
           {isError && (
-            <div className="flex items-center gap-3 p-4 rounded-xl"
-              style={{ background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)' }}>
-              <AlertCircle size={16} className="text-red-400 flex-shrink-0" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 10, padding: '12px 14px' }}>
+              <AlertCircle size={16} color="#dc2626" />
               <div>
-                <p className="text-sm font-semibold text-red-400">ML Service Error</p>
-                <p className="text-xs text-slate-500 mt-0.5">Backend ML service connect होत नाही. Backend running आहे का?</p>
+                <p style={{ fontSize: 13, fontWeight: 600, color: '#dc2626', margin: '0 0 2px' }}>ML Service Error</p>
+                <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>Unable to connect to backend ML service.</p>
               </div>
             </div>
           )}
 
-          {/* No data */}
           {!isLoading && !isError && status === 'insufficient_data' && (
-            <div className="text-center py-8">
-              <Database size={40} className="mx-auto mb-3 text-slate-700" />
-              <p className="text-sm font-semibold text-slate-400">Insufficient Training Data</p>
-              <p className="text-xs text-slate-600 mt-1 max-w-xs mx-auto">{mlData?.message}</p>
-              <div className="mt-3 inline-flex items-center gap-2 text-xs text-violet-400 bg-violet-500/10 px-3 py-2 rounded-xl border border-violet-500/20">
-                <Info size={12} /> Bulk Evaluate page वरून CSV upload करा
-              </div>
+            <div style={{ textAlign: 'center', padding: '24px 16px' }}>
+              <Database size={36} color="#d1d5db" style={{ marginBottom: 10 }} />
+              <p style={{ fontSize: 14, fontWeight: 600, color: '#374151', margin: '0 0 4px' }}>Insufficient Training Data</p>
+              <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 12px' }}>{mlData?.message}</p>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#4f6ef7', background: '#eef2ff', border: '1px solid #c7d2fe', padding: '6px 14px', borderRadius: 8 }}>
+                <Info size={12} /> Upload a CSV via Bulk Evaluate to generate data
+              </span>
             </div>
           )}
 
-          {/* Success */}
           {!isLoading && !isError && status === 'success' && (
             <>
-              {/* Model info */}
-              <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl flex-wrap"
-                style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.05)' }}>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-[11px] text-slate-500">
-                    <span className="text-white font-semibold">{modelInfo.n_evaluations || 0}</span> evaluations trained
-                  </span>
-                </div>
-                <div className="w-px h-3 bg-slate-700" />
-                <span className="text-[11px] text-slate-500">
-                  <span className="text-violet-300 font-semibold">{modelInfo.n_trees || 10}</span> decision trees
+              {/* Model info bar */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', background: '#fff', border: '1px solid #e4e7ed', borderRadius: 10, padding: '9px 14px', fontSize: 12 }}>
+                <span style={{ color: '#6b7280' }}>
+                  <strong style={{ color: '#111827' }}>{modelInfo.n_evaluations || 0}</strong> evaluations trained
                 </span>
-                <div className="w-px h-3 bg-slate-700" />
-                <span className="text-[11px] text-slate-500">
-                  <span className="text-indigo-300 font-semibold">{numericCount}</span> numeric +{' '}
-                  <span className="text-cyan-300 font-semibold">{stringCount}</span> string fields
+                <span style={{ color: '#d1d5db' }}>·</span>
+                <span style={{ color: '#6b7280' }}>
+                  <strong style={{ color: '#4f6ef7' }}>{modelInfo.n_trees || 10}</strong> decision trees
                 </span>
                 {modelInfo.top_features?.[0] && (
                   <>
-                    <div className="w-px h-3 bg-slate-700" />
-                    <span className="text-[11px] text-slate-500">
-                      Top field: <span className="text-amber-300 font-mono font-semibold">{modelInfo.top_features[0].field}</span>
-                      <span className="text-slate-600 ml-1">({modelInfo.top_features[0].importance}%)</span>
+                    <span style={{ color: '#d1d5db' }}>·</span>
+                    <span style={{ color: '#6b7280' }}>
+                      Top field: <strong style={{ color: '#d97706', fontFamily: 'monospace' }}>{modelInfo.top_features[0].field}</strong>
                     </span>
                   </>
                 )}
-              </div>
-
-              {/* Decision distribution */}
-              {modelInfo.decision_distribution && (
-                <div className="grid grid-cols-3 gap-2">
-                  {Object.entries(modelInfo.decision_distribution).map(([dec, count]) => {
-                    const meta  = ACTION_META[dec] || ACTION_META['notify']
-                    const total = Object.values(modelInfo.decision_distribution).reduce((a,b)=>a+b,0)
-                    const pct   = total ? Math.round((count/total)*100) : 0
-                    return (
-                      <div key={dec} className="rounded-xl px-3 py-2 text-center"
-                        style={{ background:meta.bg, border:`1px solid ${meta.border}` }}>
-                        <div className="text-lg font-bold" style={{ color:meta.text }}>{count}</div>
-                        <div className="text-[10px] font-semibold uppercase tracking-wide" style={{ color:meta.text }}>{dec}</div>
-                        <div className="text-[10px] text-slate-600">{pct}%</div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-
-              {/* Cards */}
-              <div className="flex items-center gap-2">
-                <Sparkles size={13} className="text-violet-400" />
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">AI Generated Suggestions</span>
-                <div className="flex-1 h-px" style={{ background:'rgba(255,255,255,0.05)' }} />
-                <span className="text-[10px] text-slate-600">
-                  {suggestions.filter(s => appliedFields.has(s.field+s.operator+s.value)).length}/{suggestions.length} applied
+                <span style={{ marginLeft: 'auto', fontSize: 11, color: '#9ca3af' }}>
+                  {suggestions.filter(s => appliedFields.has(s.field + s.operator + s.value)).length}/{suggestions.length} applied
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 gap-3">
-                {suggestions.map((s,i) => (
-                  <SuggestionCard key={i} suggestion={s} onApply={onApply}
-                    isApplied={appliedFields.has(s.field+s.operator+s.value)} />
+              {/* Suggestion cards */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                {suggestions.map((s, i) => (
+                  <SuggestionCard
+                    key={i}
+                    suggestion={s}
+                    onApply={onApply}
+                    isApplied={appliedFields.has(s.field + s.operator + s.value)}
+                  />
                 ))}
               </div>
 
-              {/* Footer */}
-              <div className="flex items-start gap-2 p-3 rounded-xl"
-                style={{ background:'rgba(99,102,241,0.06)', border:'1px solid rgba(99,102,241,0.12)' }}>
-                <Info size={13} className="text-indigo-400 flex-shrink-0 mt-0.5" />
-                <p className="text-[11px] text-slate-500 leading-relaxed">
-                  हे suggestions past evaluation patterns वरून आहेत. <span className="text-slate-300">Random Forest</span> algorithm 10 decision trees चालवतो आणि feature importance नुसार best conditions suggest करतो. Apply केल्यावर form pre-fill होतो — तुम्ही edit करू शकता.
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 10, padding: '10px 14px' }}>
+                <Info size={13} color="#4f6ef7" style={{ flexShrink: 0, marginTop: 1 }} />
+                <p style={{ fontSize: 11, color: '#4338ca', margin: 0, lineHeight: 1.5 }}>
+                  Suggestions are derived from past evaluation patterns using a Random Forest model. Clicking Apply pre-fills the rule form — you can edit before saving.
                 </p>
               </div>
             </>
@@ -300,287 +252,316 @@ function MLSuggestionPanel({ policyId, onApply, appliedFields }) {
   )
 }
 
-// ═══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
 // MAIN PAGE
-// ═══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
 export default function PolicyDetail() {
   const { id } = useParams()
   const qc = useQueryClient()
-  const { data: policy }   = useQuery({ queryKey: ['policy', id], queryFn: () => getPolicy(id) })
-  const { data: rules = [] } = useQuery({ queryKey: ['rules', id],  queryFn: () => getRules(id) })
 
-  const [showForm, setShowForm]         = useState(false)
+  const { data: policy }     = useQuery({ queryKey: ['policy', id], queryFn: () => getPolicy(id)  })
+  const { data: rules = [] } = useQuery({ queryKey: ['rules',  id], queryFn: () => getRules(id)   })
+
+  const [showForm,     setShowForm]     = useState(false)
   const [appliedFields, setAppliedFields] = useState(new Set())
   const [form, setForm] = useState({
-    name:'', description:'', priority:1, logic:'AND',
-    conditions:[emptyCondition()], actions:[emptyAction()], is_active:true
+    name: '', description: '', priority: 1, logic: 'AND',
+    conditions: [emptyCondition()], actions: [emptyAction()], is_active: true,
   })
 
   const createMut = useMutation({
     mutationFn: data => createRule({ ...data, policy_id: id }),
-    onSuccess: () => { qc.invalidateQueries(['rules',id]); setShowForm(false); toast.success('Rule created!') }
+    onSuccess: () => { qc.invalidateQueries(['rules', id]); setShowForm(false); toast.success('Rule created!') },
+    onError:   () => toast.error('Failed to create rule.'),
   })
+
   const deleteMut = useMutation({
     mutationFn: deleteRule,
-    onSuccess: () => { qc.invalidateQueries(['rules',id]); toast.success('Rule deleted') }
+    onSuccess: () => { qc.invalidateQueries(['rules', id]); toast.success('Rule deleted') },
   })
 
   const addCondition    = () => setForm(f => ({ ...f, conditions: [...f.conditions, emptyCondition()] }))
-  const removeCondition = i  => setForm(f => ({ ...f, conditions: f.conditions.filter((_,idx) => idx!==i) }))
-  const updateCondition = (i,key,val) => setForm(f => ({
-    ...f, conditions: f.conditions.map((c,idx) => idx===i ? {...c,[key]:val} : c)
+  const removeCondition = i  => setForm(f => ({ ...f, conditions: f.conditions.filter((_, idx) => idx !== i) }))
+  const updateCondition = (i, key, val) => setForm(f => ({
+    ...f, conditions: f.conditions.map((c, idx) => idx === i ? { ...c, [key]: val } : c),
   }))
+
   const handleSubmit = e => { e.preventDefault(); createMut.mutate(form) }
 
-  // ── Apply ML suggestion → pre-fill form ────────────────
-  const handleApplySuggestion = (suggestion) => {
+  const handleApplySuggestion = suggestion => {
     const key = suggestion.field + suggestion.operator + suggestion.value
     setAppliedFields(prev => new Set([...prev, key]))
     setShowForm(true)
     setForm(f => ({
       ...f,
-      name: f.name || `${suggestion.field} ${suggestion.operator} ${suggestion.value}`,
-      conditions: [
-        ...f.conditions.filter(c => c.field !== ''),
-        { field: suggestion.field, operator: suggestion.operator, value: suggestion.value, data_type: suggestion.data_type }
-      ],
-      actions: [{ type: suggestion.suggested_action, message:'', parameters:{} }]
+      name:       f.name || `${suggestion.field} ${suggestion.operator} ${suggestion.value}`,
+      conditions: [...f.conditions.filter(c => c.field !== ''), { field: suggestion.field, operator: suggestion.operator, value: suggestion.value, data_type: suggestion.data_type }],
+      actions:    [{ type: suggestion.suggested_action, message: '', parameters: {} }],
     }))
-    toast.success(`🤖 "${suggestion.field} ${suggestion.operator} ${suggestion.value}" → ${suggestion.suggested_action.toUpperCase()} form मध्ये apply झाले!`, { duration: 3000 })
-    setTimeout(() => document.getElementById('rule-form')?.scrollIntoView({ behavior:'smooth', block:'start' }), 100)
+    toast.success(`Applied: ${suggestion.field} ${suggestion.operator} ${suggestion.value}`)
+    setTimeout(() => document.getElementById('rule-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
   }
 
   if (!policy) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 400 }}>
+      <div style={{ width: 24, height: 24, border: '2px solid #4f6ef7', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
     </div>
   )
 
   return (
-    <div className="p-7 space-y-6 animate-fade-up">
+    <div style={{ padding: 28, background: '#f8f9fb', minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
       {/* Header */}
-      <div className="flex items-start gap-4">
-        <Link to="/policies" className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 hover:text-white hover:bg-white/05 transition-all flex-shrink-0 mt-0.5"
-          style={{ border:'1px solid rgba(255,255,255,0.06)' }}>
-          <ChevronLeft size={17} />
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 24 }}>
+        <Link
+          to="/policies"
+          style={{ width: 36, height: 36, borderRadius: 10, background: '#fff', border: '1px solid #e4e7ed', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', textDecoration: 'none', flexShrink: 0, marginTop: 2, transition: 'all 0.15s' }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#f3f4f6'; e.currentTarget.style.color = '#111827' }}
+          onMouseLeave={e => { e.currentTarget.style.background = '#fff';    e.currentTarget.style.color = '#6b7280' }}
+        >
+          <ChevronLeft size={16} />
         </Link>
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-2xl font-bold text-white tracking-tight">{policy.name}</h1>
-            <span className={"badge badge-" + policy.status}>{policy.status}</span>
-            <span className="text-xs text-slate-600 font-mono">v{policy.version}</span>
-          </div>
-          <p className="text-slate-500 text-sm">{policy.description}</p>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-[11px] px-2.5 py-1 rounded-full font-medium"
-              style={{ background:'rgba(99,102,241,0.1)', color:'#a5b4fc', border:'1px solid rgba(99,102,241,0.2)' }}>
-              {policy.category}
+
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>{policy.name}</h1>
+            <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20, background: policy.status === 'active' ? '#dcfce7' : '#f3f4f6', color: policy.status === 'active' ? '#166534' : '#6b7280' }}>
+              {policy.status}
             </span>
+            <span style={{ fontSize: 11, color: '#9ca3af' }}>v{policy.version}</span>
+          </div>
+          <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 8px' }}>{policy.description}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 11, fontWeight: 600, background: '#eef2ff', color: '#3730a3', padding: '3px 10px', borderRadius: 20, border: '1px solid #c7d2fe' }}>{policy.category}</span>
             {policy.tags?.map(t => (
-              <span key={t} className="text-[10px] px-2 py-0.5 rounded-full"
-                style={{ background:'rgba(255,255,255,0.04)', color:'#64748b', border:'1px solid rgba(255,255,255,0.06)' }}>
-                {t}
-              </span>
+              <span key={t} style={{ fontSize: 10, background: '#f3f4f6', color: '#9ca3af', padding: '2px 8px', borderRadius: 20 }}>{t}</span>
             ))}
           </div>
         </div>
-        <button className="btn-primary flex-shrink-0" onClick={() => setShowForm(true)}>
+
+        <button
+          onClick={() => setShowForm(true)}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#4f6ef7', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
+        >
           <Plus size={14} /> Add Rule
         </button>
       </div>
 
-      {/* ══ ML PANEL ══ */}
-      <MLSuggestionPanel policyId={id} onApply={handleApplySuggestion} appliedFields={appliedFields} />
+      {/* ML Panel */}
+      <div style={{ marginBottom: 20 }}>
+        <MLSuggestionPanel policyId={id} onApply={handleApplySuggestion} appliedFields={appliedFields} />
+      </div>
 
       {/* Add Rule Form */}
       {showForm && (
-        <div id="rule-form" className="relative rounded-2xl p-6 animate-fade-up"
-          style={{ background:'linear-gradient(135deg,rgba(79,110,247,0.06),rgba(108,61,232,0.04))', border:'1px solid rgba(79,110,247,0.2)' }}>
-          <div className="absolute top-0 left-8 right-8 h-px" style={{ background:'linear-gradient(90deg,transparent,rgba(79,110,247,0.5),transparent)' }} />
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2">
-              <Settings2 size={16} className="text-indigo-400" />
-              <h3 className="font-bold text-white">Create New Rule</h3>
+        <div
+          id="rule-form"
+          style={{ background: '#fff', border: '1px solid #c7d2fe', borderRadius: 14, padding: 22, marginBottom: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Settings2 size={16} color="#4f6ef7" />
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: '#111827', margin: 0 }}>Create New Rule</h3>
               {form.conditions.some(c => c.field !== '') && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
-                  style={{ background:'rgba(139,92,246,0.12)', color:'#c4b5fd', border:'1px solid rgba(139,92,246,0.2)' }}>
-                  🤖 ML Pre-filled
-                </span>
+                <span style={{ fontSize: 10, fontWeight: 700, background: '#eef2ff', color: '#4f6ef7', border: '1px solid #c7d2fe', padding: '2px 8px', borderRadius: 20 }}>ML Pre-filled</span>
               )}
             </div>
-            <button onClick={() => setShowForm(false)} className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-white hover:bg-white/10 transition-all">
-              <X size={14} />
-            </button>
+            <button onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}><X size={16} /></button>
           </div>
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="col-span-2">
-                <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Rule Name</label>
-                <input className="input" placeholder="e.g. Age Check" value={form.name}
-                  onChange={e => setForm(f => ({...f,name:e.target.value}))} required />
+
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* Name + priority */}
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Rule Name</label>
+                <input required style={INPUT_STYLE} placeholder="e.g. Age Check" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Priority</label>
-                <input className="input" type="number" min="1" value={form.priority}
-                  onChange={e => setForm(f => ({...f,priority:parseInt(e.target.value)}))} />
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Priority</label>
+                <input style={INPUT_STYLE} type="number" min="1" value={form.priority} onChange={e => setForm(f => ({ ...f, priority: parseInt(e.target.value) }))} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+
+            {/* Logic + Active */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Logic Mode</label>
-                <div className="flex gap-2">
-                  {['AND','OR'].map(l => (
-                    <button key={l} type="button" onClick={() => setForm(f => ({...f,logic:l}))}
-                      className={"flex-1 py-2.5 rounded-xl text-sm font-bold transition-all " + (form.logic===l ? 'text-white' : 'text-slate-500 hover:text-slate-300')}
-                      style={form.logic===l
-                        ? { background:'linear-gradient(135deg,#4f6ef7,#6c3de8)', boxShadow:'0 0 16px rgba(79,110,247,0.3)' }
-                        : { background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.06)' }}>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Logic Mode</label>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {['AND', 'OR'].map(l => (
+                    <button
+                      key={l} type="button"
+                      onClick={() => setForm(f => ({ ...f, logic: l }))}
+                      style={{ flex: 1, padding: '8px', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: 'pointer', border: '1px solid', transition: 'all 0.15s', background: form.logic === l ? '#4f6ef7' : '#f9fafb', color: form.logic === l ? '#fff' : '#6b7280', borderColor: form.logic === l ? '#4f6ef7' : '#e4e7ed' }}
+                    >
                       {l}
                     </button>
                   ))}
                 </div>
               </div>
-              <div className="flex items-end">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <div onClick={() => setForm(f => ({...f,is_active:!f.is_active}))}
-                    className="w-10 h-5 rounded-full transition-all cursor-pointer relative"
-                    style={form.is_active ? { background:'linear-gradient(135deg,#4f6ef7,#6c3de8)' } : { background:'#334155' }}>
-                    <div className={"absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all " + (form.is_active ? 'left-5' : 'left-0.5')} />
+              <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 2 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                  <div
+                    onClick={() => setForm(f => ({ ...f, is_active: !f.is_active }))}
+                    style={{ width: 38, height: 20, borderRadius: 99, position: 'relative', cursor: 'pointer', transition: 'background 0.2s', background: form.is_active ? '#4f6ef7' : '#d1d5db' }}
+                  >
+                    <div style={{ position: 'absolute', top: 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', left: form.is_active ? 20 : 2 }} />
                   </div>
-                  <span className="text-sm text-slate-300 font-medium">Active</span>
+                  <span style={{ fontSize: 13, color: '#374151', fontWeight: 500 }}>Active</span>
                 </label>
               </div>
             </div>
+
+            {/* Conditions */}
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                  Conditions {form.conditions.some(c=>c.field!=='') && <span className="text-violet-400 normal-case ml-1">(ML suggested ✓)</span>}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  Conditions {form.conditions.some(c => c.field !== '') && <span style={{ color: '#4f6ef7', textTransform: 'none', fontWeight: 500 }}>(ML suggested)</span>}
                 </label>
-                <button type="button" onClick={addCondition} className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition-colors">
+                <button type="button" onClick={addCondition} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: '#4f6ef7', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', borderRadius: 7 }}>
                   <Plus size={11} /> Add Condition
                 </button>
               </div>
-              <div className="space-y-2">
-                {form.conditions.map((c,i) => (
-                  <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                    <input className="input col-span-3" placeholder="field name" value={c.field} onChange={e => updateCondition(i,'field',e.target.value)} required />
-                    <select className="input col-span-3" value={c.operator} onChange={e => updateCondition(i,'operator',e.target.value)}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                {form.conditions.map((c, i) => (
+                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '3fr 3fr 3fr 2fr 28px', gap: 7, alignItems: 'center' }}>
+                    <input style={INPUT_STYLE} placeholder="field name" value={c.field}      required onChange={e => updateCondition(i, 'field', e.target.value)} />
+                    <select style={INPUT_STYLE}                           value={c.operator}          onChange={e => updateCondition(i, 'operator', e.target.value)}>
                       {OPERATORS.map(op => <option key={op}>{op}</option>)}
                     </select>
-                    <input className="input col-span-3" placeholder="value" value={c.value} onChange={e => updateCondition(i,'value',e.target.value)} />
-                    <select className="input col-span-2" value={c.data_type} onChange={e => updateCondition(i,'data_type',e.target.value)}>
+                    <input style={INPUT_STYLE} placeholder="value"       value={c.value}             onChange={e => updateCondition(i, 'value', e.target.value)} />
+                    <select style={INPUT_STYLE}                           value={c.data_type}          onChange={e => updateCondition(i, 'data_type', e.target.value)}>
                       <option value="string">string</option>
                       <option value="number">number</option>
                       <option value="boolean">boolean</option>
                     </select>
-                    <button type="button" onClick={() => removeCondition(i)} disabled={form.conditions.length===1}
-                      className="col-span-1 w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-all disabled:opacity-30 mx-auto">
+                    <button
+                      type="button" onClick={() => removeCondition(i)}
+                      disabled={form.conditions.length === 1}
+                      style={{ width: 28, height: 28, borderRadius: 7, background: 'none', border: 'none', cursor: form.conditions.length === 1 ? 'not-allowed' : 'pointer', color: '#9ca3af', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: form.conditions.length === 1 ? 0.3 : 1 }}
+                    >
                       <X size={13} />
                     </button>
                   </div>
                 ))}
               </div>
             </div>
+
+            {/* Action type */}
             <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wide">Action When Triggered</label>
-              <div className="flex gap-2 flex-wrap">
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Action When Triggered</label>
+              <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
                 {ACTION_TYPES.map(a => {
-                  const meta = ACTION_META[a] || ACTION_META['notify']
+                  const meta     = ACTION_META[a] || { bg: '#f3f4f6', text: '#374151', border: '#e4e7ed' }
                   const selected = form.actions[0]?.type === a
                   return (
-                    <button key={a} type="button" onClick={() => setForm(f => ({...f,actions:[{...f.actions[0],type:a}]}))}
-                      className={"px-4 py-2 rounded-xl text-sm font-bold transition-all " + (selected ? '' : 'opacity-40 hover:opacity-70')}
-                      style={selected
-                        ? { background:meta.bg, color:meta.text, border:`1px solid ${meta.border}`, boxShadow:`0 0 12px ${meta.bg}` }
-                        : { background:'rgba(255,255,255,0.03)', color:'#94a3b8', border:'1px solid rgba(255,255,255,0.06)' }}>
+                    <button
+                      key={a} type="button"
+                      onClick={() => setForm(f => ({ ...f, actions: [{ ...f.actions[0], type: a }] }))}
+                      style={{ padding: '7px 16px', borderRadius: 9, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid', transition: 'all 0.15s', background: selected ? meta.bg : '#f9fafb', color: selected ? meta.text : '#9ca3af', borderColor: selected ? meta.border : '#e4e7ed', opacity: selected ? 1 : 0.7 }}
+                    >
                       {a}
                     </button>
                   )
                 })}
               </div>
             </div>
-            <div className="flex gap-3 pt-2">
-              <button type="submit" disabled={createMut.isPending} className="btn-primary">
+
+            {/* Buttons */}
+            <div style={{ display: 'flex', gap: 8, paddingTop: 4 }}>
+              <button
+                type="submit"
+                disabled={createMut.isPending}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#4f6ef7', color: '#fff', border: 'none', borderRadius: 9, padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: createMut.isPending ? 0.6 : 1 }}
+              >
                 {createMut.isPending
-                  ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Creating...</>
-                  : <><Plus size={14} /> Create Rule</>}
+                  ? <><div style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} /> Creating…</>
+                  : <><Plus size={13} /> Create Rule</>}
               </button>
-              <button type="button" className="btn-ghost" onClick={() => setShowForm(false)}>Cancel</button>
+              <button type="button" onClick={() => setShowForm(false)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent', color: '#6b7280', border: '1px solid #e4e7ed', borderRadius: 9, padding: '9px 16px', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+                Cancel
+              </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* Rules List */}
+      {/* Rules list */}
       <div>
-        <div className="flex items-center gap-2 mb-4">
-          <Layers size={15} className="text-slate-600" />
-          <span className="text-sm font-semibold text-slate-400">{rules.length} Rules</span>
-          {rules.length > 0 && <span className="text-[10px] text-slate-700">· sorted by priority</span>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
+          <Layers size={15} color="#9ca3af" />
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#6b7280' }}>{rules.length} Rules</span>
+          {rules.length > 0 && <span style={{ fontSize: 11, color: '#9ca3af' }}>· sorted by priority</span>}
         </div>
-        <div className="space-y-3 stagger">
-          {[...rules].sort((a,b) => a.priority-b.priority).map(r => {
-            const meta = ACTION_META[r.actions?.[0]?.type] || ACTION_META['notify']
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[...rules].sort((a, b) => a.priority - b.priority).map(r => {
+            const meta     = ACTION_META[r.actions?.[0]?.type] || { bg: '#f3f4f6', text: '#374151', border: '#e4e7ed' }
             return (
-              <div key={r.id} className="group relative rounded-2xl p-5 transition-all duration-200"
-                style={{ background:'linear-gradient(135deg,rgba(12,20,40,0.9),rgba(8,14,28,0.95))', border:'1px solid rgba(255,255,255,0.05)' }}
-                onMouseEnter={e => e.currentTarget.style.borderColor=meta.border}
-                onMouseLeave={e => e.currentTarget.style.borderColor='rgba(255,255,255,0.05)'}>
-                <div className="absolute left-0 top-4 bottom-4 w-0.5 rounded-full" style={{ background:meta.text, opacity:0.5 }} />
-                <div className="flex items-start gap-4 pl-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0"
-                    style={{ background:meta.bg, color:meta.text, border:`1px solid ${meta.border}` }}>
-                    #{r.priority}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2.5 mb-2">
-                      <span className="font-bold text-white text-sm">{r.name}</span>
-                      <span className={"text-[10px] px-2 py-0.5 rounded-full font-semibold " + (r.is_active ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-500/10 text-slate-500 border border-slate-500/20')}>
-                        {r.is_active ? '● Active' : '○ Inactive'}
-                      </span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-mono font-semibold" style={{ background:'rgba(255,255,255,0.05)', color:'#64748b' }}>
-                        {r.logic}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {r.conditions?.map((c,i) => (
-                        <span key={i} className="text-[11px] px-3 py-1.5 rounded-lg font-mono"
-                          style={{ background:'rgba(255,255,255,0.04)', color:'#94a3b8', border:'1px solid rgba(255,255,255,0.06)' }}>
-                          <span className="text-slate-300">{c.field}</span>
-                          <span className="text-slate-600 mx-1">{c.operator}</span>
-                          <span className="text-indigo-300">{c.value}</span>
-                        </span>
-                      ))}
-                      {r.conditions?.length > 0 && <ArrowRight size={11} className="text-slate-700" />}
-                      {r.actions?.map((a,i) => {
-                        const am = ACTION_META[a.type] || ACTION_META['notify']
-                        return (
-                          <span key={i} className="text-[11px] px-3 py-1.5 rounded-lg font-bold"
-                            style={{ background:am.bg, color:am.text, border:`1px solid ${am.border}` }}>
-                            {a.type}
-                          </span>
-                        )
-                      })}
-                    </div>
-                  </div>
-                  <button onClick={() => deleteMut.mutate(r.id)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 hover:text-red-400 hover:bg-red-500/10">
-                    <Trash2 size={14} />
-                  </button>
+              <div
+                key={r.id}
+                style={{ background: '#fff', border: '1px solid #e4e7ed', borderRadius: 13, padding: '15px 18px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'flex-start', gap: 12, transition: 'box-shadow 0.15s', position: 'relative' }}
+                onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.07)'}
+                onMouseLeave={e => e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'}
+              >
+                {/* Left accent */}
+                <div style={{ position: 'absolute', left: 0, top: 12, bottom: 12, width: 3, borderRadius: '0 3px 3px 0', background: meta.border }} />
+
+                <div style={{ width: 34, height: 34, borderRadius: 9, background: meta.bg, border: `1px solid ${meta.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: meta.text, flexShrink: 0, marginLeft: 8 }}>
+                  {r.priority}
                 </div>
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>{r.name}</span>
+                    <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: r.is_active ? '#dcfce7' : '#f3f4f6', color: r.is_active ? '#166534' : '#6b7280' }}>
+                      {r.is_active ? 'active' : 'inactive'}
+                    </span>
+                    <span style={{ fontSize: 10, background: '#f3f4f6', color: '#9ca3af', padding: '2px 8px', borderRadius: 20 }}>{r.logic}</span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    {r.conditions?.map((c, i) => (
+                      <span key={i} style={{ fontSize: 11, fontFamily: 'monospace', padding: '4px 10px', borderRadius: 8, background: '#f9fafb', color: '#374151', border: '1px solid #f3f4f6' }}>
+                        <span style={{ color: '#4f6ef7' }}>{c.field}</span>
+                        <span style={{ color: '#9ca3af', margin: '0 4px' }}>{c.operator}</span>
+                        <span style={{ fontWeight: 700 }}>{c.value}</span>
+                      </span>
+                    ))}
+                    {r.conditions?.length > 0 && <ArrowRight size={11} color="#d1d5db" />}
+                    {r.actions?.map((a, i) => {
+                      const am = ACTION_META[a.type] || { bg: '#f3f4f6', text: '#374151', border: '#e4e7ed' }
+                      return (
+                        <span key={i} style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, background: am.bg, color: am.text, border: `1px solid ${am.border}` }}>
+                          {a.type}
+                        </span>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => { if (window.confirm('Delete this rule?')) deleteMut.mutate(r.id) }}
+                  style={{ width: 30, height: 30, borderRadius: 8, background: 'none', border: '1px solid #f3f4f6', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', flexShrink: 0, transition: 'all 0.15s' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.color = '#dc2626'; e.currentTarget.style.borderColor = '#fca5a5' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'none';    e.currentTarget.style.color = '#9ca3af'; e.currentTarget.style.borderColor = '#f3f4f6' }}
+                >
+                  <Trash2 size={13} />
+                </button>
               </div>
             )
           })}
+
           {rules.length === 0 && (
-            <div className="text-center py-20 text-slate-600">
-              <Layers size={48} className="mx-auto mb-4 opacity-20" />
-              <p className="font-semibold text-slate-500">No rules yet</p>
-              <p className="text-sm mt-1">👆 ML Suggestions panel उघडा किंवा "Add Rule" click करा</p>
+            <div style={{ textAlign: 'center', padding: '60px 0', color: '#9ca3af' }}>
+              <Layers size={40} style={{ marginBottom: 12, opacity: 0.3 }} />
+              <p style={{ fontWeight: 600, color: '#6b7280', fontSize: 14, margin: '0 0 4px' }}>No rules yet</p>
+              <p style={{ fontSize: 13, margin: 0 }}>Open the ML Suggestions panel or click "Add Rule" to create one</p>
             </div>
           )}
         </div>
       </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </div>
   )
 }

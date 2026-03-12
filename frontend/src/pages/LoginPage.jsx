@@ -4,17 +4,25 @@ import { useAuthStore } from '../store/authStore'
 import toast from 'react-hot-toast'
 import { Zap, Eye, EyeOff, Shield, Activity, CheckCircle } from 'lucide-react'
 
-const features = [
-  { icon: Shield, text: 'Policy Rule Engine' },
-  { icon: Activity, text: 'Bulk CSV Evaluation' },
-  { icon: CheckCircle, text: 'Real-time Results' },
+const FEATURES = [
+  { icon: Shield,      text: 'Policy Rule Engine'   },
+  { icon: Activity,    text: 'Bulk CSV Evaluation'  },
+  { icon: CheckCircle, text: 'Real-time Results'    },
 ]
 
+const INPUT_STYLE = {
+  width: '100%', padding: '10px 14px', background: '#f9fafb',
+  border: '1px solid #e4e7ed', borderRadius: 10, fontSize: 14,
+  color: '#111827', outline: 'none', boxSizing: 'border-box',
+  transition: 'border-color 0.15s',
+}
+
 export default function LoginPage() {
-  const [mode, setMode] = useState('login')
-  const [form, setForm] = useState({ username: '', email: '', password: '', role: 'analyst' })
-  const [show, setShow] = useState(false)
+  const [mode,    setMode]    = useState('login')
+  const [form,    setForm]    = useState({ username: '', email: '', password: '', role: 'analyst' })
+  const [showPw,  setShowPw]  = useState(false)
   const [loading, setLoading] = useState(false)
+
   const { login, register } = useAuthStore()
   const navigate = useNavigate()
 
@@ -28,155 +36,181 @@ export default function LoginPage() {
       navigate('/')
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Authentication failed')
-    } finally { setLoading(false) }
+    } finally {
+      setLoading(false)
+    }
   }
 
+  const update = (key, val) => setForm(f => ({ ...f, [key]: val }))
+
   return (
-    <div className="min-h-screen flex bg-grid" style={{ background: '#04080f' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', fontFamily: 'system-ui, -apple-system, sans-serif', background: '#f8f9fb' }}>
 
-      {/* Left panel */}
-      <div className="hidden lg:flex w-1/2 flex-col justify-between p-12 relative overflow-hidden">
-        {/* Background glows */}
-        <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-          <div style={{ position:'absolute', top:'10%', left:'20%', width:400, height:400, background:'radial-gradient(circle, rgba(79,110,247,0.12) 0%, transparent 70%)', borderRadius:'50%' }} />
-          <div style={{ position:'absolute', bottom:'20%', right:'10%', width:300, height:300, background:'radial-gradient(circle, rgba(108,61,232,0.1) 0%, transparent 70%)', borderRadius:'50%' }} />
-        </div>
-
+      {/* ── Left panel ── */}
+      <div style={{
+        width: '44%', flexShrink: 0,
+        background: 'linear-gradient(160deg, #3d5af1 0%, #5b3ff8 100%)',
+        display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+        padding: '48px 52px',
+      }}>
         {/* Logo */}
-        <div className="flex items-center gap-3 relative z-10">
-          <div className="w-10 h-10 rounded-2xl flex items-center justify-center"
-            style={{ background:'linear-gradient(135deg,#4f6ef7,#6c3de8)', boxShadow:'0 0 24px rgba(79,110,247,0.5)' }}>
-            <Zap size={20} className="text-white" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 42, height: 42, borderRadius: 13, background: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Zap size={20} color="#fff" />
           </div>
           <div>
-            <div className="font-bold text-white text-lg">PolicyEngine</div>
-            <div className="text-xs text-slate-600 uppercase tracking-widest">Rule Evaluation System</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>PolicyEngine</div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Rule Evaluation System</div>
           </div>
         </div>
 
-        {/* Hero text */}
-        <div className="relative z-10">
-          <h2 className="text-4xl font-bold text-white leading-tight mb-4">
-            Evaluate Rules.<br />
-            <span className="gradient-text">Make Decisions.</span><br />
-            At Scale.
+        {/* Hero */}
+        <div>
+          <h2 style={{ fontSize: 38, fontWeight: 800, color: '#fff', lineHeight: 1.15, margin: '0 0 18px', letterSpacing: '-0.5px' }}>
+            Evaluate Rules.<br />Make Decisions.<br />At Scale.
           </h2>
-          <p className="text-slate-500 text-base leading-relaxed mb-8">
+          <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 15, lineHeight: 1.65, margin: '0 0 32px', maxWidth: 320 }}>
             Upload CSV files, define policies with conditions, and instantly get eligibility results for hundreds of applicants.
           </p>
-          <div className="space-y-3">
-            {features.map(({ icon: Icon, text }) => (
-              <div key={text} className="flex items-center gap-3">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-indigo-500/10">
-                  <Icon size={14} className="text-indigo-400" />
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {FEATURES.map(({ icon: Icon, text }) => (
+              <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 9, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Icon size={15} color="#fff" />
                 </div>
-                <span className="text-slate-400 text-sm">{text}</span>
+                <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14 }}>{text}</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Bottom stat */}
-        <div className="relative z-10 flex gap-8">
-          {[['10+', 'Operators'], ['3', 'Decision Types'], ['∞', 'Evaluations']].map(([v, l]) => (
+        {/* Stats */}
+        <div style={{ display: 'flex', gap: 36 }}>
+          {[['10+', 'Operators'], ['3', 'Decision Types'], ['Unlimited', 'Evaluations']].map(([v, l]) => (
             <div key={l}>
-              <div className="text-2xl font-bold gradient-text">{v}</div>
-              <div className="text-xs text-slate-600">{l}</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: '#fff' }}>{v}</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>{l}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Right panel — form */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-md">
-
-          {/* Mobile logo */}
-          <div className="flex lg:hidden items-center justify-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-2xl flex items-center justify-center"
-              style={{ background:'linear-gradient(135deg,#4f6ef7,#6c3de8)', boxShadow:'0 0 24px rgba(79,110,247,0.4)' }}>
-              <Zap size={20} className="text-white" />
-            </div>
-            <div className="font-bold text-white text-xl">PolicyEngine</div>
-          </div>
+      {/* ── Right panel: form ── */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48 }}>
+        <div style={{ width: '100%', maxWidth: 400 }}>
 
           {/* Card */}
-          <div className="relative rounded-3xl p-8"
-            style={{
-              background:'linear-gradient(135deg, rgba(15,25,50,0.95) 0%, rgba(8,15,30,0.98) 100%)',
-              border:'1px solid rgba(255,255,255,0.07)',
-              boxShadow:'0 0 0 1px rgba(79,110,247,0.1), 0 32px 64px rgba(0,0,0,0.5)'
-            }}>
+          <div style={{ background: '#fff', border: '1px solid #e4e7ed', borderRadius: 18, padding: 32, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
 
-            {/* Top glow line */}
-            <div className="absolute top-0 left-8 right-8 h-px rounded-full"
-              style={{ background:'linear-gradient(90deg, transparent, rgba(79,110,247,0.5), transparent)' }} />
-
-            <div className="mb-7">
-              <h1 className="text-xl font-bold text-white mb-1">
+            <div style={{ marginBottom: 28 }}>
+              <h1 style={{ fontSize: 20, fontWeight: 700, color: '#111827', margin: '0 0 6px' }}>
                 {mode === 'login' ? 'Sign in to your account' : 'Create your account'}
               </h1>
-              <p className="text-slate-500 text-sm">
-                {mode === 'login' ? "Don't have an account? " : "Already have an account? "}
-                <button onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-                  className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors">
+              <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>
+                {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+                <button
+                  onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+                  style={{ background: 'none', border: 'none', color: '#4f6ef7', fontWeight: 600, fontSize: 13, cursor: 'pointer', padding: 0 }}
+                >
                   {mode === 'login' ? 'Register' : 'Sign in'}
                 </button>
               </p>
             </div>
 
-            <form onSubmit={handle} className="space-y-4">
+            <form onSubmit={handle} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
               {mode === 'register' && (
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">Username</label>
-                  <input className="input" placeholder="johndoe" value={form.username}
-                    onChange={e => setForm(f => ({ ...f, username: e.target.value }))} required />
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Username</label>
+                  <input
+                    style={INPUT_STYLE}
+                    placeholder="johndoe"
+                    value={form.username}
+                    onChange={e => update('username', e.target.value)}
+                    required
+                    onFocus={e => e.target.style.borderColor = '#a5b4fc'}
+                    onBlur={e  => e.target.style.borderColor = '#e4e7ed'}
+                  />
                 </div>
               )}
+
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">Email</label>
-                <input className="input" type="email" placeholder="you@example.com" value={form.email}
-                  onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required />
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Email</label>
+                <input
+                  style={INPUT_STYLE}
+                  type="email"
+                  placeholder="you@example.com"
+                  value={form.email}
+                  onChange={e => update('email', e.target.value)}
+                  required
+                  onFocus={e => e.target.style.borderColor = '#a5b4fc'}
+                  onBlur={e  => e.target.style.borderColor = '#e4e7ed'}
+                />
               </div>
+
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">Password</label>
-                <div className="relative">
-                  <input className="input pr-11" type={show ? 'text' : 'password'} placeholder="••••••••"
-                    value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} required />
-                  <button type="button" onClick={() => setShow(!show)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-400 transition-colors">
-                    {show ? <EyeOff size={16} /> : <Eye size={16} />}
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Password</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    style={{ ...INPUT_STYLE, paddingRight: 44 }}
+                    type={showPw ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={form.password}
+                    onChange={e => update('password', e.target.value)}
+                    required
+                    onFocus={e => e.target.style.borderColor = '#a5b4fc'}
+                    onBlur={e  => e.target.style.borderColor = '#e4e7ed'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw(s => !s)}
+                    style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', display: 'flex', alignItems: 'center' }}
+                  >
+                    {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
               </div>
+
               {mode === 'register' && (
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">Role</label>
-                  <select className="input" value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Role</label>
+                  <select
+                    value={form.role}
+                    onChange={e => update('role', e.target.value)}
+                    style={{ ...INPUT_STYLE }}
+                    onFocus={e => e.target.style.borderColor = '#a5b4fc'}
+                    onBlur={e  => e.target.style.borderColor = '#e4e7ed'}
+                  >
                     <option value="analyst">Analyst</option>
                     <option value="admin">Admin</option>
                   </select>
                 </div>
               )}
-              <div className="pt-2">
-                <button type="submit" disabled={loading}
-                  className="w-full py-3 rounded-xl text-sm font-bold text-white transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
-                  style={{
-                    background:'linear-gradient(135deg, #4f6ef7, #6c3de8)',
-                    boxShadow: loading ? 'none' : '0 0 24px rgba(79,110,247,0.4), 0 1px 0 rgba(255,255,255,0.1) inset'
-                  }}>
-                  {loading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Please wait...
-                    </span>
-                  ) : mode === 'login' ? 'Sign In →' : 'Create Account →'}
-                </button>
-              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                style={{
+                  width: '100%', background: '#4f6ef7', color: '#fff', border: 'none',
+                  borderRadius: 11, padding: '13px', fontSize: 14, fontWeight: 700,
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  opacity: loading ? 0.65 : 1, transition: 'opacity 0.15s', marginTop: 4,
+                }}
+              >
+                {loading ? (
+                  <><div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} /> Please wait…</>
+                ) : (
+                  mode === 'login' ? 'Sign In' : 'Create Account'
+                )}
+              </button>
             </form>
           </div>
         </div>
       </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </div>
   )
 }

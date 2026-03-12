@@ -4,172 +4,197 @@ import { getLogs } from '../api/endpoints'
 import { ScrollText, PlusCircle, RefreshCw, Edit3, Trash2, Play, User } from 'lucide-react'
 
 const ACTION_CONFIG = {
-  CREATE:   { icon: PlusCircle, bg:'rgba(16,185,129,0.1)',  text:'#34d399', border:'rgba(16,185,129,0.2)',  label:'CREATE'   },
-  UPDATE:   { icon: Edit3,      bg:'rgba(99,102,241,0.1)',  text:'#a5b4fc', border:'rgba(99,102,241,0.2)',  label:'UPDATE'   },
-  DELETE:   { icon: Trash2,     bg:'rgba(239,68,68,0.1)',   text:'#f87171', border:'rgba(239,68,68,0.2)',   label:'DELETE'   },
-  EVALUATE: { icon: Play,       bg:'rgba(245,158,11,0.1)',  text:'#fbbf24', border:'rgba(245,158,11,0.2)',  label:'EVALUATE' },
+  CREATE:   { bg: '#dcfce7', text: '#166534', border: '#bbf7d0', icon: PlusCircle },
+  UPDATE:   { bg: '#eef2ff', text: '#3730a3', border: '#c7d2fe', icon: Edit3      },
+  DELETE:   { bg: '#fee2e2', text: '#991b1b', border: '#fca5a5', icon: Trash2     },
+  EVALUATE: { bg: '#fef9c3', text: '#854d0e', border: '#fde047', icon: Play       },
 }
 
 const ENTITY_COLORS = {
-  policy:     { bg:'rgba(99,102,241,0.08)',  text:'#a5b4fc' },
-  rule:       { bg:'rgba(6,182,212,0.08)',   text:'#67e8f9' },
-  evaluation: { bg:'rgba(245,158,11,0.08)',  text:'#fbbf24' },
-  user:       { bg:'rgba(16,185,129,0.08)',  text:'#34d399' },
+  policy:     { bg: '#eef2ff', text: '#4f6ef7' },
+  rule:       { bg: '#e0f2fe', text: '#0891b2' },
+  evaluation: { bg: '#fef9c3', text: '#d97706' },
+  user:       { bg: '#dcfce7', text: '#16a34a' },
 }
 
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime()
   const m = Math.floor(diff / 60000)
-  if (m < 1) return 'just now'
+  if (m < 1)  return 'just now'
   if (m < 60) return `${m}m ago`
   const h = Math.floor(m / 60)
   if (h < 24) return `${h}h ago`
-  return `${Math.floor(h/24)}d ago`
+  return `${Math.floor(h / 24)}d ago`
 }
 
 export default function LogsPage() {
   const [entityFilter, setEntityFilter] = useState('')
   const [actionFilter, setActionFilter] = useState('')
+
   const { data: logs = [], isLoading, refetch } = useQuery({
-    queryKey: ['logs', entityFilter],
-    queryFn: () => getLogs(entityFilter || undefined),
+    queryKey:       ['logs', entityFilter],
+    queryFn:        () => getLogs(entityFilter || undefined),
     refetchInterval: 10000,
   })
 
   const filtered = actionFilter ? logs.filter(l => l.action === actionFilter) : logs
 
   const stats = {
-    total: logs.length,
-    creates: logs.filter(l=>l.action==='CREATE').length,
-    updates: logs.filter(l=>l.action==='UPDATE').length,
-    deletes: logs.filter(l=>l.action==='DELETE').length,
-    evals: logs.filter(l=>l.action==='EVALUATE').length,
+    total:   logs.length,
+    creates: logs.filter(l => l.action === 'CREATE').length,
+    updates: logs.filter(l => l.action === 'UPDATE').length,
+    deletes: logs.filter(l => l.action === 'DELETE').length,
+    evals:   logs.filter(l => l.action === 'EVALUATE').length,
+  }
+
+  const SELECT_STYLE = {
+    padding: '8px 12px', background: '#fff', border: '1px solid #e4e7ed',
+    borderRadius: 9, fontSize: 13, color: '#374151', outline: 'none',
   }
 
   return (
-    <div className="p-7 space-y-6 animate-fade-up">
+    <div style={{ padding: 28, background: '#f8f9fb', minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Audit Logs</h1>
-          <p className="text-slate-500 text-sm mt-0.5">Every action tracked · {logs.length} entries</p>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Audit Logs</h1>
+          <p style={{ color: '#6b7280', fontSize: 13, margin: '4px 0 0' }}>Every action tracked · {logs.length} entries</p>
         </div>
-        <button onClick={() => refetch()} className="btn-ghost flex items-center gap-2">
+        <button
+          onClick={() => refetch()}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#fff', color: '#374151', border: '1px solid #e4e7ed', borderRadius: 9, padding: '8px 16px', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
+        >
           <RefreshCw size={14} /> Refresh
         </button>
       </div>
 
-      {/* Stats row */}
-      <div className="grid grid-cols-5 gap-3">
+      {/* Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 20 }}>
         {[
-          { label:'Total', value: stats.total,   color:'#94a3b8', bg:'rgba(100,116,139,0.1)' },
-          { label:'Creates', value: stats.creates, color:'#34d399', bg:'rgba(16,185,129,0.1)'  },
-          { label:'Updates', value: stats.updates, color:'#a5b4fc', bg:'rgba(99,102,241,0.1)'  },
-          { label:'Deletes', value: stats.deletes, color:'#f87171', bg:'rgba(239,68,68,0.1)'   },
-          { label:'Evaluations', value: stats.evals,   color:'#fbbf24', bg:'rgba(245,158,11,0.1)' },
-        ].map(({ label, value, color, bg }) => (
-          <div key={label} className="rounded-2xl p-4 text-center"
-            style={{ background: bg, border:`1px solid ${color}20` }}>
-            <div className="text-2xl font-bold" style={{ color }}>{value}</div>
-            <div className="text-xs text-slate-500 mt-0.5">{label}</div>
+          { label: 'Total',       value: stats.total,   bg: '#f3f4f6', text: '#374151' },
+          { label: 'Created',     value: stats.creates, bg: '#dcfce7', text: '#166534' },
+          { label: 'Updated',     value: stats.updates, bg: '#eef2ff', text: '#3730a3' },
+          { label: 'Deleted',     value: stats.deletes, bg: '#fee2e2', text: '#991b1b' },
+          { label: 'Evaluations', value: stats.evals,   bg: '#fef9c3', text: '#854d0e' },
+        ].map(({ label, value, bg, text }) => (
+          <div key={label} style={{ background: bg, borderRadius: 12, padding: '14px 16px', textAlign: 'center' }}>
+            <div style={{ fontSize: 24, fontWeight: 700, color: text }}>{value}</div>
+            <div style={{ fontSize: 11, color: '#6b7280', marginTop: 3 }}>{label}</div>
           </div>
         ))}
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3">
-        <select className="input w-48" value={entityFilter} onChange={e => setEntityFilter(e.target.value)}>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+        <select value={entityFilter} onChange={e => setEntityFilter(e.target.value)} style={{ ...SELECT_STYLE, minWidth: 170 }}>
           <option value="">All Entity Types</option>
           <option value="policy">Policies</option>
           <option value="rule">Rules</option>
           <option value="evaluation">Evaluations</option>
           <option value="user">Users</option>
         </select>
-        <div className="flex gap-2">
-          {['', 'CREATE','UPDATE','DELETE','EVALUATE'].map(a => (
-            <button key={a} onClick={() => setActionFilter(a)}
-              className={"text-xs px-3 py-1.5 rounded-xl font-semibold transition-all " +
-                (actionFilter === a
-                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
-                  : 'text-slate-500 border border-white/05 hover:text-slate-300 hover:bg-white/5')}>
+
+        <div style={{ display: 'flex', gap: 6 }}>
+          {['', 'CREATE', 'UPDATE', 'DELETE', 'EVALUATE'].map(a => (
+            <button
+              key={a}
+              onClick={() => setActionFilter(a)}
+              style={{
+                fontSize: 12, padding: '7px 14px', borderRadius: 9, fontWeight: 500,
+                border: '1px solid',
+                borderColor: actionFilter === a ? '#4f6ef7' : '#e4e7ed',
+                background:  actionFilter === a ? '#eef2ff' : '#fff',
+                color:       actionFilter === a ? '#4f6ef7' : '#6b7280',
+                cursor: 'pointer', transition: 'all 0.15s',
+              }}
+            >
               {a || 'All'}
             </button>
           ))}
         </div>
-        <div className="ml-auto text-xs text-slate-600 self-center">{filtered.length} entries</div>
+
+        <span style={{ fontSize: 12, color: '#9ca3af', marginLeft: 'auto' }}>{filtered.length} entries</span>
       </div>
 
-      {/* Timeline log */}
+      {/* Log entries */}
       {isLoading ? (
-        <div className="space-y-3">{[1,2,3,4].map(i => <div key={i} className="card h-16 animate-shimmer" />)}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} style={{ height: 56, background: '#fff', border: '1px solid #e4e7ed', borderRadius: 12, animation: 'shimmer 1.5s infinite' }} />
+          ))}
+        </div>
       ) : (
-        <div className="relative">
-          {/* Timeline line */}
-          <div className="absolute left-[22px] top-4 bottom-4 w-px" style={{ background:'linear-gradient(180deg, rgba(79,110,247,0.3), transparent)' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+          {filtered.map(log => {
+            const cfg    = ACTION_CONFIG[log.action] || ACTION_CONFIG.CREATE
+            const entCfg = ENTITY_COLORS[log.entity_type] || { bg: '#f3f4f6', text: '#374151' }
+            const Icon   = cfg.icon
 
-          <div className="space-y-2">
-            {filtered.map((log, idx) => {
-              const cfg = ACTION_CONFIG[log.action] || ACTION_CONFIG['CREATE']
-              const Icon = cfg.icon
-              const entCfg = ENTITY_COLORS[log.entity_type] || { bg:'rgba(100,116,139,0.08)', text:'#94a3b8' }
-              return (
-                <div key={log.id} className="flex items-start gap-4 group">
-                  {/* Timeline dot */}
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 z-10"
-                    style={{ background: cfg.bg, border:`1px solid ${cfg.border}` }}>
-                    <Icon size={14} style={{ color: cfg.text }} />
-                  </div>
-
-                  {/* Card */}
-                  <div className="flex-1 rounded-2xl px-4 py-3 transition-all duration-150"
-                    style={{ background:'rgba(10,16,35,0.8)', border:'1px solid rgba(255,255,255,0.04)' }}
-                    onMouseEnter={e => e.currentTarget.style.borderColor='rgba(79,110,247,0.15)'}
-                    onMouseLeave={e => e.currentTarget.style.borderColor='rgba(255,255,255,0.04)'}>
-                    <div className="flex items-center gap-3 flex-wrap">
-                      {/* Action badge */}
-                      <span className="text-[11px] px-2 py-0.5 rounded-md font-bold"
-                        style={{ background: cfg.bg, color: cfg.text, border:`1px solid ${cfg.border}` }}>
-                        {cfg.label}
-                      </span>
-                      {/* Entity type */}
-                      <span className="text-[11px] px-2 py-0.5 rounded-md font-semibold capitalize"
-                        style={{ background: entCfg.bg, color: entCfg.text }}>
-                        {log.entity_type}
-                      </span>
-                      {/* Entity name */}
-                      <span className="text-xs font-semibold text-white">{log.entity_name}</span>
-                      {/* Separator */}
-                      <span className="text-slate-700">·</span>
-                      {/* User */}
-                      <span className="flex items-center gap-1.5 text-xs text-slate-500">
-                        <User size={10} />{log.performed_by}
-                      </span>
-                      {/* Details if any */}
-                      {Object.keys(log.details || {}).length > 0 && (
-                        <span className="text-[10px] font-mono text-slate-700 bg-white/[0.03] px-2 py-0.5 rounded max-w-xs truncate">
-                          {JSON.stringify(log.details)}
-                        </span>
-                      )}
-                      {/* Time */}
-                      <span className="ml-auto text-[11px] text-slate-600 whitespace-nowrap">
-                        {timeAgo(log.timestamp)}
-                        <span className="text-slate-700 ml-2">{new Date(log.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-                      </span>
-                    </div>
-                  </div>
+            return (
+              <div key={log.id} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                {/* Icon dot */}
+                <div style={{
+                  width: 40, height: 40, borderRadius: 11, flexShrink: 0,
+                  background: cfg.bg, border: `1px solid ${cfg.border}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Icon size={15} color={cfg.text} />
                 </div>
-              )
-            })}
 
-            {filtered.length === 0 && (
-              <div className="text-center py-20 text-slate-600">
-                <ScrollText size={48} className="mx-auto mb-4 opacity-20" />
-                <p className="font-semibold text-slate-500">No audit logs yet</p>
-                <p className="text-sm mt-1">Actions will be tracked here automatically</p>
+                {/* Card */}
+                <div style={{
+                  flex: 1, background: '#fff', border: '1px solid #e4e7ed',
+                  borderRadius: 11, padding: '10px 16px',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                  display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+                }}>
+                  {/* Action badge */}
+                  <span style={{ fontSize: 10, fontWeight: 700, background: cfg.bg, color: cfg.text, border: `1px solid ${cfg.border}`, padding: '2px 8px', borderRadius: 6 }}>
+                    {log.action}
+                  </span>
+
+                  {/* Entity type */}
+                  <span style={{ fontSize: 10, fontWeight: 600, background: entCfg.bg, color: entCfg.text, padding: '2px 8px', borderRadius: 6, textTransform: 'capitalize' }}>
+                    {log.entity_type}
+                  </span>
+
+                  {/* Entity name */}
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{log.entity_name}</span>
+
+                  <span style={{ color: '#e4e7ed' }}>·</span>
+
+                  {/* User */}
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#6b7280' }}>
+                    <User size={11} /> {log.performed_by}
+                  </span>
+
+                  {/* Details */}
+                  {Object.keys(log.details || {}).length > 0 && (
+                    <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#9ca3af', background: '#f9fafb', padding: '2px 8px', borderRadius: 6, maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {JSON.stringify(log.details)}
+                    </span>
+                  )}
+
+                  {/* Time */}
+                  <span style={{ marginLeft: 'auto', fontSize: 11, color: '#9ca3af', whiteSpace: 'nowrap' }}>
+                    {timeAgo(log.timestamp)}
+                    <span style={{ color: '#d1d5db', marginLeft: 8 }}>
+                      {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </span>
+                </div>
               </div>
-            )}
-          </div>
+            )
+          })}
+
+          {filtered.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: '#9ca3af' }}>
+              <ScrollText size={40} style={{ marginBottom: 12, opacity: 0.3 }} />
+              <p style={{ fontWeight: 600, color: '#6b7280', fontSize: 14, margin: '0 0 4px' }}>No audit logs yet</p>
+              <p style={{ fontSize: 13, margin: 0 }}>Actions will appear here automatically</p>
+            </div>
+          )}
         </div>
       )}
     </div>
