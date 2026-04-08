@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from passlib.context import CryptContext
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
+from beanie import PydanticObjectId
 from models.user import User
 from schemas.validators import RegisterSchema
 import os
@@ -33,7 +34,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         user_id = payload.get("sub")
         if not user_id:
             raise HTTPException(status_code=401, detail="Invalid token.")
-        user = await User.get(user_id)
+        user = await User.get(PydanticObjectId(user_id))
         if not user:
             raise HTTPException(status_code=401, detail="User not found.")
         if not user.is_active:
