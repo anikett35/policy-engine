@@ -26,6 +26,19 @@ export default function LoginPage() {
   const { login, register } = useAuthStore()
   const navigate = useNavigate()
 
+  // Safely extract a readable string from FastAPI errors.
+  // FastAPI returns detail as a string for 401/400, but an array of objects for 422.
+  const getErrMsg = (err) => {
+    const detail = err.response?.data?.detail
+    if (!detail) return 'Authentication failed'
+    if (typeof detail === 'string') return detail
+    if (Array.isArray(detail) && detail.length > 0) {
+      // Each item has a "msg" field, e.g. "Value error, Password must contain..."
+      return detail.map(d => d.msg?.replace(/^Value error, /, '') ?? 'Validation error').join(' • ')
+    }
+    return 'Authentication failed'
+  }
+
   const handle = async e => {
     e.preventDefault()
     setLoading(true)
@@ -35,7 +48,7 @@ export default function LoginPage() {
       toast.success('Welcome to PolicyEngine!')
       navigate('/')
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Authentication failed')
+      toast.error(getErrMsg(err))
     } finally {
       setLoading(false)
     }

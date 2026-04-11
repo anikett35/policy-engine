@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const api = axios.create({ baseURL: '/api' })
+const api = axios.create({ baseURL: import.meta.env.DEV ? '/api' : 'https://policy-engine-v4ce.onrender.com/api' })
 
 api.interceptors.request.use(cfg => {
   const token = localStorage.getItem('token')
