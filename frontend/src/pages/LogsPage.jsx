@@ -17,8 +17,11 @@ const ENTITY_COLORS = {
   user:       { bg: '#dcfce7', text: '#16a34a' },
 }
 
+// ✅ Backend IST isoformat string directly parse करतो
 function timeAgo(dateStr) {
-  const diff = Date.now() - new Date(dateStr).getTime()
+  const now = new Date()
+  const past = new Date(dateStr)
+  const diff = now - past
   const m = Math.floor(diff / 60000)
   if (m < 1)  return 'just now'
   if (m < 60) return `${m}m ago`
@@ -27,13 +30,32 @@ function timeAgo(dateStr) {
   return `${Math.floor(h / 24)}d ago`
 }
 
+// ✅ IST time display — backend already IST पाठवतो
+function formatISTTime(dateStr) {
+  return new Date(dateStr).toLocaleTimeString('en-IN', {
+    hour:     '2-digit',
+    minute:   '2-digit',
+    hour12:   true,
+    timeZone: 'Asia/Kolkata'
+  })
+}
+
+function formatISTDate(dateStr) {
+  return new Date(dateStr).toLocaleDateString('en-IN', {
+    day:      '2-digit',
+    month:    'short',
+    year:     'numeric',
+    timeZone: 'Asia/Kolkata'
+  })
+}
+
 export default function LogsPage() {
   const [entityFilter, setEntityFilter] = useState('')
   const [actionFilter, setActionFilter] = useState('')
 
   const { data: logs = [], isLoading, refetch } = useQuery({
-    queryKey:       ['logs', entityFilter],
-    queryFn:        () => getLogs(entityFilter || undefined),
+    queryKey:        ['logs', entityFilter],
+    queryFn:         () => getLogs(entityFilter || undefined),
     refetchInterval: 10000,
   })
 
@@ -176,11 +198,11 @@ export default function LogsPage() {
                     </span>
                   )}
 
-                  {/* Time */}
+                  {/* ✅ Time — IST Correct */}
                   <span style={{ marginLeft: 'auto', fontSize: 11, color: '#9ca3af', whiteSpace: 'nowrap' }}>
                     {timeAgo(log.timestamp)}
                     <span style={{ color: '#d1d5db', marginLeft: 8 }}>
-                      {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {formatISTDate(log.timestamp)} {formatISTTime(log.timestamp)}
                     </span>
                   </span>
                 </div>

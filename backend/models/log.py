@@ -1,6 +1,6 @@
 from beanie import Document
-from datetime import datetime
-from typing import Optional, Any, Dict
+from datetime import datetime, timezone
+from typing import Any, Dict
 
 class AuditLog(Document):
     action: str
@@ -9,7 +9,7 @@ class AuditLog(Document):
     entity_name: str
     performed_by: str
     details: Dict[str, Any] = {}
-    timestamp: datetime = datetime.utcnow()
+    timestamp: datetime = datetime.now(tz=timezone.utc)  # ✅ timezone-aware UTC
 
     class Settings:
         name = "audit_logs"
