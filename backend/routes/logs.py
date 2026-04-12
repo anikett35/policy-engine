@@ -2,8 +2,18 @@ from fastapi import APIRouter, Depends
 from models.log import AuditLog
 from routes.auth import get_current_user
 from models.user import User
+from datetime import timezone, timedelta
 
 router = APIRouter()
+
+IST = timezone(timedelta(hours=5, minutes=30))
+
+def to_ist(dt):
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(IST).isoformat()
 
 @router.get("")
 async def get_logs(limit: int = 100, entity_type: str = None, current_user: User = Depends(get_current_user)):
@@ -17,5 +27,5 @@ async def get_logs(limit: int = 100, entity_type: str = None, current_user: User
         "entity_name": l.entity_name,
         "performed_by": l.performed_by,
         "details": l.details,
-        "timestamp": l.timestamp
+        "timestamp": to_ist(l.timestamp)  
     } for l in logs]
