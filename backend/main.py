@@ -8,7 +8,7 @@ app = FastAPI(title="Policy Rules Evaluation Engine", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "https://policy-engine-v4ce.onrender.com", "https://policy-engine-steel.vercel.app"],
+    allow_origins=["http://localhost:5173", "https://policy-engine-v4ce.onrender.com", "https://policy-engine-steel.vercel.app", "https://policy-engine-rubiscape.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
