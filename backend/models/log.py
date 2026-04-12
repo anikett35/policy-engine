@@ -1,6 +1,7 @@
 from beanie import Document
 from datetime import datetime, timezone
 from typing import Any, Dict
+from pydantic import Field
 
 class AuditLog(Document):
     action: str
@@ -9,7 +10,7 @@ class AuditLog(Document):
     entity_name: str
     performed_by: str
     details: Dict[str, Any] = {}
-    timestamp: datetime = datetime.now(tz=timezone.utc)  # ✅ timezone-aware UTC
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     class Settings:
         name = "audit_logs"
