@@ -1,212 +1,274 @@
+import { useState } from 'react'
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import {
-  LayoutDashboard, Shield, Layers, ClipboardList,
-  ScrollText, LogOut, Zap, FileSpreadsheet, Wand2, ChevronRight
-} from 'lucide-react'
+  Box, Drawer, AppBar, Toolbar, IconButton, Typography, Avatar,
+  List, ListItemButton, ListItemIcon, ListItemText, Divider,
+  Chip, useMediaQuery, useTheme, Tooltip, alpha,
+} from '@mui/material'
+import {
+  Dashboard as DashboardIcon, Security, Layers, Assignment,
+  Description, Logout, Bolt, TableChart, AutoAwesome,
+  Menu as MenuIcon, ChevronRight,
+} from '@mui/icons-material'
 import ChatBot from './ChatBot'
+
+const DRAWER_WIDTH = 252
 
 const NAV_SECTIONS = [
   {
     label: 'Main',
     items: [
-      { to: '/',              label: 'Dashboard',    icon: LayoutDashboard, exact: true },
+      { to: '/', label: 'Dashboard', icon: DashboardIcon, exact: true },
     ],
   },
   {
     label: 'AI Features',
     items: [
-      { to: '/ai-generator',  label: 'AI Generator', icon: Wand2,          badge: 'NEW', highlight: true },
+      { to: '/ai-generator', label: 'AI Generator', icon: AutoAwesome, badge: 'NEW', highlight: true },
     ],
   },
   {
     label: 'Manage',
     items: [
-      { to: '/policies',      label: 'Policies',     icon: Shield   },
-      { to: '/rules',         label: 'Rules',        icon: Layers   },
+      { to: '/policies', label: 'Policies', icon: Security },
+      { to: '/rules', label: 'Rules', icon: Layers },
     ],
   },
   {
     label: 'Evaluate',
     items: [
-      { to: '/bulk-evaluate', label: 'Bulk Evaluate', icon: FileSpreadsheet, badge: 'CSV' },
-      { to: '/evaluations',   label: 'Results',       icon: ClipboardList },
+      { to: '/bulk-evaluate', label: 'Bulk Evaluate', icon: TableChart, badge: 'CSV' },
+      { to: '/evaluations', label: 'Results', icon: Assignment },
     ],
   },
   {
     label: 'System',
     items: [
-      { to: '/logs',          label: 'Audit Logs',   icon: ScrollText },
+      { to: '/logs', label: 'Audit Logs', icon: Description },
     ],
   },
 ]
 
 export default function Layout() {
   const { user, logout } = useAuthStore()
-  const navigate  = useNavigate()
-  const location  = useLocation()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   const handleLogout = () => { logout(); navigate('/login') }
+  const handleDrawerToggle = () => setMobileOpen(!mobileOpen)
+
+  const drawerContent = (
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {/* Logo */}
+      <Box sx={{ px: 2.5, py: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+          <Box sx={{
+            width: 38, height: 38, borderRadius: 2.5,
+            background: 'linear-gradient(135deg, #4f6ef7 0%, #7c3aed 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 2px 10px rgba(79,110,247,0.3)',
+          }}>
+            <Bolt sx={{ fontSize: 18, color: '#fff' }} />
+          </Box>
+          <Box>
+            <Typography sx={{ fontSize: 15, fontWeight: 700, color: 'text.primary', lineHeight: 1.2 }}>
+              PolicyEngine
+            </Typography>
+            <Typography sx={{ fontSize: 9, color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600, mt: 0.25 }}>
+              Rule System v2.0
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
+
+      {/* Navigation */}
+      <Box sx={{ flex: 1, overflowY: 'auto', px: 1.5, py: 1.5, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {NAV_SECTIONS.map(({ label, items }) => (
+          <Box key={label}>
+            <Typography sx={{ fontSize: 9, fontWeight: 700, color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.14em', px: 1.5, mb: 0.5 }}>
+              {label}
+            </Typography>
+            <List dense disablePadding>
+              {items.map(({ to, label: itemLabel, icon: Icon, exact, badge, highlight }) => {
+                const isActive = exact ? location.pathname === to : location.pathname.startsWith(to)
+                return (
+                  <ListItemButton
+                    key={to}
+                    component={NavLink}
+                    to={to}
+                    end={exact || undefined}
+                    selected={isActive}
+                    onClick={() => isMobile && setMobileOpen(false)}
+                    sx={{
+                      borderRadius: 2.5,
+                      mb: 0.25,
+                      px: 1.5,
+                      py: 0.9,
+                      border: '1px solid transparent',
+                      ...(isActive && {
+                        bgcolor: alpha(theme.palette.primary.main, 0.08),
+                        border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                      }),
+                    }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 36 }}>
+                      <Box sx={{
+                        width: 30, height: 30, borderRadius: 1.75,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        bgcolor: isActive ? alpha(theme.palette.primary.main, 0.12) : highlight ? alpha('#7c3aed', 0.08) : 'action.hover',
+                      }}>
+                        <Icon sx={{
+                          fontSize: 16,
+                          color: isActive ? 'primary.main' : highlight ? '#7c3aed' : 'text.disabled',
+                        }} />
+                      </Box>
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={itemLabel}
+                      primaryTypographyProps={{
+                        fontSize: 13, fontWeight: isActive ? 600 : 500,
+                        color: isActive ? 'primary.dark' : highlight ? '#7c3aed' : 'text.primary',
+                      }}
+                    />
+                    {badge && (
+                      <Chip
+                        label={badge}
+                        size="small"
+                        sx={{
+                          height: 18, fontSize: 9, fontWeight: 700,
+                          bgcolor: highlight ? alpha('#7c3aed', 0.08) : alpha(theme.palette.primary.main, 0.08),
+                          color: highlight ? '#7c3aed' : 'primary.main',
+                          border: `1px solid ${highlight ? alpha('#7c3aed', 0.2) : alpha(theme.palette.primary.main, 0.2)}`,
+                        }}
+                      />
+                    )}
+                    {isActive && <ChevronRight sx={{ fontSize: 14, color: 'primary.main', ml: 0.5 }} />}
+                  </ListItemButton>
+                )
+              })}
+            </List>
+          </Box>
+        ))}
+      </Box>
+
+      <Divider />
+
+      {/* User */}
+      <Box sx={{ p: 1.5 }}>
+        <Box sx={{
+          display: 'flex', alignItems: 'center', gap: 1.25,
+          p: 1.25, borderRadius: 2.5,
+          bgcolor: 'action.hover', border: '1px solid', borderColor: 'divider',
+        }}>
+          <Avatar sx={{
+            width: 34, height: 34, bgcolor: 'primary.main',
+            fontSize: 13, fontWeight: 700,
+          }}>
+            {user?.username?.[0]?.toUpperCase()}
+          </Avatar>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography sx={{ fontSize: 12, fontWeight: 600, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {user?.username}
+            </Typography>
+            <Typography sx={{ fontSize: 10, color: 'text.disabled', textTransform: 'capitalize', mt: 0.25 }}>
+              {user?.role}
+            </Typography>
+          </Box>
+          <Tooltip title="Logout" arrow>
+            <IconButton
+              onClick={handleLogout}
+              size="small"
+              sx={{
+                color: 'text.disabled',
+                '&:hover': { bgcolor: 'error.light', color: 'error.main' },
+              }}
+            >
+              <Logout sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      </Box>
+    </Box>
+  )
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#f8f9fb', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-
-      {/* ── Sidebar ── */}
-      <aside style={{
-        width: 232, flexShrink: 0, display: 'flex', flexDirection: 'column',
-        background: '#fff', borderRight: '1px solid #e4e7ed',
-        boxShadow: '1px 0 0 #f3f4f6',
-      }}>
-
-        {/* Logo */}
-        <div style={{ padding: '18px 16px 12px', borderBottom: '1px solid #f3f4f6' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: 11,
-              background: '#4f6ef7',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              boxShadow: '0 2px 8px rgba(79,110,247,0.3)',
-            }}>
-              <Zap size={16} color="#fff" />
-            </div>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#111827', lineHeight: 1.2 }}>PolicyEngine</div>
-              <div style={{ fontSize: 9, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600, marginTop: 1 }}>
-                Rule System v2.0
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Nav */}
-        <nav style={{ flex: 1, overflowY: 'auto', padding: '10px 10px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-          {NAV_SECTIONS.map(({ label, items }) => (
-            <div key={label}>
-              <div style={{ fontSize: 9, fontWeight: 700, color: '#d1d5db', textTransform: 'uppercase', letterSpacing: '0.14em', padding: '0 8px', marginBottom: 4 }}>
-                {label}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {items.map(({ to, label: itemLabel, icon: Icon, exact, badge, highlight }) => {
-                  const isActive = exact
-                    ? location.pathname === to
-                    : location.pathname.startsWith(to)
-                  return (
-                    <NavLink
-                      key={to}
-                      to={to}
-                      end={exact}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 9,
-                        padding: '8px 10px', borderRadius: 10, textDecoration: 'none',
-                        transition: 'all 0.13s',
-                        background: isActive ? '#eef2ff' : 'transparent',
-                        border: `1px solid ${isActive ? '#c7d2fe' : 'transparent'}`,
-                      }}
-                      onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#f9fafb' }}
-                      onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
-                    >
-                      {/* Icon */}
-                      <div style={{
-                        width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: isActive
-                          ? '#dbe4ff'
-                          : highlight
-                            ? '#f5f3ff'
-                            : '#f3f4f6',
-                      }}>
-                        <Icon
-                          size={14}
-                          color={
-                            isActive    ? '#4f6ef7'
-                            : highlight ? '#7c3aed'
-                            : '#9ca3af'
-                          }
-                        />
-                      </div>
-
-                      {/* Label */}
-                      <span style={{
-                        flex: 1, fontSize: 13, fontWeight: isActive ? 600 : 500,
-                        color: isActive    ? '#3730a3'
-                               : highlight ? '#7c3aed'
-                               : '#374151',
-                      }}>
-                        {itemLabel}
-                      </span>
-
-                      {/* Badge */}
-                      {badge && (
-                        <span style={{
-                          fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 6,
-                          background: highlight ? '#f5f3ff' : '#eef2ff',
-                          color:      highlight ? '#7c3aed' : '#4f6ef7',
-                          border: `1px solid ${highlight ? '#ddd6fe' : '#c7d2fe'}`,
-                        }}>
-                          {badge}
-                        </span>
-                      )}
-
-                      {/* Active chevron */}
-                      {isActive && <ChevronRight size={12} color="#4f6ef7" style={{ flexShrink: 0 }} />}
-                    </NavLink>
-                  )
-                })}
-              </div>
-            </div>
-          ))}
-        </nav>
-
-        {/* Divider */}
-        <div style={{ height: 1, background: '#f3f4f6', margin: '0 12px' }} />
-
-        {/* User */}
-        <div style={{ padding: '10px 10px 16px' }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 9,
-            padding: '9px 10px', borderRadius: 11,
-            background: '#f9fafb', border: '1px solid #f3f4f6',
-          }}>
-            <div style={{
-              width: 32, height: 32, borderRadius: 9, flexShrink: 0,
-              background: '#4f6ef7',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 12, fontWeight: 700, color: '#fff',
-            }}>
-              {user?.username?.[0]?.toUpperCase()}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {user?.username}
-              </div>
-              <div style={{ fontSize: 10, color: '#9ca3af', textTransform: 'capitalize', marginTop: 1 }}>
-                {user?.role}
-              </div>
-            </div>
-            <button
-              onClick={handleLogout}
-              title="Logout"
-              style={{
-                width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-                background: 'none', border: 'none', cursor: 'pointer',
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+      {/* Mobile AppBar */}
+      {isMobile && (
+        <AppBar
+          position="fixed"
+          color="inherit"
+          elevation={0}
+          sx={{ borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}
+        >
+          <Toolbar sx={{ minHeight: '56px !important', gap: 1.5 }}>
+            <IconButton onClick={handleDrawerToggle} edge="start" size="small">
+              <MenuIcon />
+            </IconButton>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{
+                width: 30, height: 30, borderRadius: 1.75,
+                background: 'linear-gradient(135deg, #4f6ef7 0%, #7c3aed 100%)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#9ca3af', transition: 'all 0.15s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.color = '#dc2626' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'none';    e.currentTarget.style.color = '#9ca3af' }}
-            >
-              <LogOut size={13} />
-            </button>
-          </div>
-        </div>
-      </aside>
+              }}>
+                <Bolt sx={{ fontSize: 14, color: '#fff' }} />
+              </Box>
+              <Typography sx={{ fontSize: 14, fontWeight: 700, color: 'text.primary' }}>PolicyEngine</Typography>
+            </Box>
+            <Box sx={{ flex: 1 }} />
+            <Avatar sx={{ width: 30, height: 30, bgcolor: 'primary.main', fontSize: 12, fontWeight: 700 }}>
+              {user?.username?.[0]?.toUpperCase()}
+            </Avatar>
+          </Toolbar>
+        </AppBar>
+      )}
 
-      {/* ── Main content ── */}
-      <main style={{ flex: 1, overflowY: 'auto', position: 'relative' }}>
+      {/* Sidebar Drawer */}
+      <Box component="nav" sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }}>
+        {/* Mobile drawer */}
+        <Drawer
+          variant="temporary"
+          open={mobileOpen}
+          onClose={handleDrawerToggle}
+          ModalProps={{ keepMounted: true }}
+          sx={{
+            display: { xs: 'block', md: 'none' },
+            '& .MuiDrawer-paper': { width: DRAWER_WIDTH, boxSizing: 'border-box' },
+          }}
+        >
+          {drawerContent}
+        </Drawer>
+        {/* Desktop drawer */}
+        <Drawer
+          variant="permanent"
+          sx={{
+            display: { xs: 'none', md: 'block' },
+            '& .MuiDrawer-paper': { width: DRAWER_WIDTH, boxSizing: 'border-box' },
+          }}
+          open
+        >
+          {drawerContent}
+        </Drawer>
+      </Box>
+
+      {/* Main Content */}
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          overflow: 'auto',
+          minHeight: '100vh',
+          ...(isMobile && { mt: '56px' }),
+        }}
+      >
         <Outlet />
-      </main>
+      </Box>
 
       <ChatBot />
-    </div>
+    </Box>
   )
 }
