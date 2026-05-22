@@ -1,13 +1,77 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import Optional
-from services.rule_engine import evaluator
-from models.evaluation import Evaluation
+import asyncio
+from functools import partial
+from services.rule_engine import evaluator, _executor
+from models.evaluation import Evaluation, RuleResult
 from models.policy import Policy
+from models.rule import Rule
+from models.log import AuditLog
 from routes.auth import get_current_user
 from models.user import User
-from schemas.validators import EvaluateSchema
+from schemas.validators import EvaluateSchema, BulkEvaluateSchema
+from datetime import datetime
 
 router = APIRouter()
+
+@router.post("/run/bulk")
+async def run_bulk_evaluation(req: BulkEvaluateSchema, current_user: User = Depends(get_current_user)):
+    """Fast bulk evaluation: fetches rules once, evaluates all rows in parallel threads."""
+    policy = await Policy.get(req.policy_id)
+    if not policy:
+        raise HTTPException(status_code=404, detail=f"Policy '{req.policy_id}' not found.")
+    if policy.status == "archived":
+        raise HTTPException(status_code=400, detail="Cannot evaluate against an archived policy.")
+
+    # Fetch rules ONCE — shared across all rows
+    rules = await Rule.find(
+        Rule.policy_id == req.policy_id,
+        Rule.is_active == True
+    ).sort(Rule.priority).to_list()
+
+    if not rules:
+        raise HTTPException(status_code=400, detail="This policy has no active rules to evaluate.")
+
+    loop = asyncio.get_event_loop()
+
+    def safe_eval(row_data: dict):
+        try:
+            return evaluator.evaluate_policy_fast(row_data, rules)
+        except Exception as e:
+            return {"error": str(e), "final_decision": "error",
+                    "rules_matched": 0, "rules_total": len(rules),
+                    "execution_time_ms": 0, "results": []}
+
+    # Submit all rows to thread pool — truly parallel CPU execution
+    futures = [loop.run_in_executor(_executor, partial(safe_eval, row)) for row in req.rows]
+    results = await asyncio.gather(*futures)
+    
+    # Save all evaluations to database
+    evaluations_to_save = []
+    for i, result in enumerate(results):
+        if result.get("final_decision") != "error":
+            # Convert results back to RuleResult objects
+            rule_results = [RuleResult(**r) if isinstance(r, dict) else r for r in result.get("results", [])]
+            evaluation = Evaluation(
+                policy_id=req.policy_id,
+                policy_name=policy.name,
+                input_data=req.rows[i],
+                results=rule_results,
+                final_decision=result.get("final_decision", "deny"),
+                rules_matched=result.get("rules_matched", 0),
+                rules_total=result.get("rules_total", 0),
+                execution_time_ms=result.get("execution_time_ms", 0),
+                evaluated_by=current_user.username,
+                evaluated_at=datetime.utcnow()
+            )
+            evaluations_to_save.append(evaluation)
+    
+    # Bulk insert all evaluations
+    if evaluations_to_save:
+        await Evaluation.insert_many(evaluations_to_save)
+    
+    return {"policy_id": req.policy_id, "policy_name": policy.name, "results": list(results)}
+
 
 @router.post("/run")
 async def run_evaluation(req: EvaluateSchema, current_user: User = Depends(get_current_user)):

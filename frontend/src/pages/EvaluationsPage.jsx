@@ -9,12 +9,14 @@ import {
   Box, Grid, Card, CardContent, Typography, Chip, Tabs, Tab,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   TextField, Select, MenuItem, FormControl, InputLabel, Collapse,
-  IconButton, InputAdornment, CircularProgress, Paper, Skeleton, alpha,
+  IconButton, InputAdornment, CircularProgress, Paper, Skeleton, alpha, Button,
 } from '@mui/material'
 import {
   CheckCircle, Cancel, Flag, AccessTime, ExpandMore, ChevronRight,
-  Bolt, Search, SwapVert, VerifiedUser, GppBad, Warning, BarChart as BarChartIcon, People,
+  Bolt, Search, SwapVert, VerifiedUser, GppBad, Warning, BarChart as BarChartIcon, People, PictureAsPdf,
 } from '@mui/icons-material'
+import PDFDownloadModal from '../components/PDFDownloadModal'
+import { downloadBulkResultPDF } from '../utils/pdfExport'
 
 const DECISION_META = {
   allow: { label: 'Eligible', color: '#16a34a', bg: '#dcfce7', text: '#166534', border: '#bbf7d0', icon: VerifiedUser },
@@ -43,6 +45,7 @@ export default function EvaluationsPage() {
   const [sortDir, setSortDir] = useState('desc')
   const [search, setSearch] = useState('')
   const [expandedId, setExpandedId] = useState(null)
+  const [pdfModalOpen, setPdfModalOpen] = useState(false)
 
   const policies = useMemo(() => {
     const map = {}
@@ -102,10 +105,27 @@ export default function EvaluationsPage() {
           <Typography variant="h2">Evaluation Results</Typography>
           <Typography variant="subtitle1" sx={{ mt: 0.5 }}>{evaluations.length} total evaluations across {policies.length} policies</Typography>
         </Box>
-        <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ bgcolor: 'action.hover', borderRadius: 2.5, p: 0.5, minHeight: 40, '& .MuiTab-root': { minHeight: 36 } }}>
-          <Tab icon={<BarChartIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Dashboard" sx={{ fontSize: 12 }} />
-          <Tab icon={<People sx={{ fontSize: 16 }} />} iconPosition="start" label="All Results" sx={{ fontSize: 12 }} />
-        </Tabs>
+        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
+          {filtered.length > 0 && (
+            <Button
+              variant="contained"
+              startIcon={<PictureAsPdf />}
+              onClick={() => setPdfModalOpen(true)}
+              size="small"
+              sx={{
+                background: 'linear-gradient(135deg, #4f6ef7, #7c3aed)',
+                '&:hover': { background: 'linear-gradient(135deg, #3d5ce5, #6d28d9)' },
+                borderRadius: 2.5, fontWeight: 700,
+              }}
+            >
+              Download PDF
+            </Button>
+          )}
+          <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ bgcolor: 'action.hover', borderRadius: 2.5, p: 0.5, minHeight: 40, '& .MuiTab-root': { minHeight: 36 } }}>
+            <Tab icon={<BarChartIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Dashboard" sx={{ fontSize: 12 }} />
+            <Tab icon={<People sx={{ fontSize: 16 }} />} iconPosition="start" label="All Results" sx={{ fontSize: 12 }} />
+          </Tabs>
+        </Box>
       </Box>
 
       {/* Dashboard Tab */}
@@ -282,6 +302,14 @@ export default function EvaluationsPage() {
           </TableContainer>
         </Box>
       )}
+
+      {/* PDF Download Modal */}
+      <PDFDownloadModal
+        open={pdfModalOpen}
+        onClose={() => setPdfModalOpen(false)}
+        title="Download Evaluations PDF"
+        onDownload={filterKey => downloadBulkResultPDF(filtered, filterKey, [], '', false)}
+      />
     </Box>
   )
 }

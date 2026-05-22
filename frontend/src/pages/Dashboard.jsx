@@ -38,8 +38,8 @@ const DECISION_STYLES = {
 export default function Dashboard() {
   const { user } = useAuthStore()
   const { data: policies = [], isLoading: loadingPolicies } = useQuery({ queryKey: ['policies'], queryFn: getPolicies })
-  const { data: stats, isLoading: loadingStats } = useQuery({ queryKey: ['eval-stats'], queryFn: getEvaluationStats })
-  const { data: recent = [] } = useQuery({ queryKey: ['evaluations'], queryFn: () => getEvaluations() })
+  const { data: stats, isLoading: loadingStats } = useQuery({ queryKey: ['eval-stats'], queryFn: getEvaluationStats, staleTime: 0 })
+  const { data: recent = [] } = useQuery({ queryKey: ['evaluations'], queryFn: () => getEvaluations(), staleTime: 0 })
 
   const pieData = stats ? [
     { name: 'Eligible', value: stats.allow, color: PIE_COLORS[0] },

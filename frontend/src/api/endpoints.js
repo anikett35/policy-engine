@@ -16,6 +16,8 @@ export const deleteRule = id => api.delete(`/rules/${id}`).then(r => r.data)
 
 // Evaluations
 export const runEvaluation = data => api.post('/evaluations/run', data).then(r => r.data)
+export const runBulkEvaluation = (policyId, rows, signal) =>
+  api.post('/evaluations/run/bulk', { policy_id: policyId, rows }, { signal }).then(r => r.data)
 export const getEvaluations = (policyId) => api.get('/evaluations', { params: policyId ? { policy_id: policyId } : {} }).then(r => r.data)
 export const getEvaluationStats = () => api.get('/evaluations/stats').then(r => r.data)
 export const getEvaluation = id => api.get(`/evaluations/${id}`).then(r => r.data)

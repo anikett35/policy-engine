@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getPolicies, runEvaluation } from '../api/endpoints'
 import toast from 'react-hot-toast'
-import { Play, Plus, Trash2, CheckCircle, XCircle, Flag, Clock, Zap } from 'lucide-react'
+import { Play, Plus, Trash2, CheckCircle, XCircle, Flag, Clock, Zap, Download } from 'lucide-react'
+import PDFDownloadModal from '../components/PDFDownloadModal'
+import { downloadSingleResultPDF } from '../utils/pdfExport'
 
 const DECISION_STYLES = {
   allow: { bg: '#f0fdf4', border: '#bbf7d0', icon: CheckCircle, color: '#16a34a', label: 'Approved' },
@@ -17,15 +19,27 @@ const INPUT_STYLE = {
 }
 
 export default function EvaluatePage() {
+  const queryClient = useQueryClient()
   const { data: policies = [] } = useQuery({ queryKey: ['policies'], queryFn: getPolicies })
 
   const [selectedPolicy, setSelectedPolicy] = useState('')
   const [fields, setFields] = useState([{ key: '', value: '' }])
   const [result, setResult] = useState(null)
+  const [pdfModalOpen, setPdfModalOpen] = useState(false)
 
   const evalMut = useMutation({
     mutationFn: runEvaluation,
-    onSuccess: data => { setResult(data); toast.success('Evaluation complete!') },
+    onSuccess: data => { 
+      setResult(data)
+      toast.success('Evaluation complete!')
+      // Refetch dashboard stats and recent evaluations
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['eval-stats'] })
+        queryClient.invalidateQueries({ queryKey: ['evaluations'] })
+        queryClient.refetchQueries({ queryKey: ['eval-stats'] })
+        queryClient.refetchQueries({ queryKey: ['evaluations'] })
+      }, 200)
+    },
     onError:   err  => toast.error(err.response?.data?.detail || 'Evaluation failed'),
   })
 
@@ -165,6 +179,23 @@ export default function EvaluatePage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#9ca3af', fontSize: 12, marginLeft: 6 }}>
                         <Clock size={13} /> {result.execution_time_ms}ms
                       </div>
+                      {/* PDF Download Button */}
+                      <button
+                        onClick={() => setPdfModalOpen(true)}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 6,
+                          padding: '8px 14px', borderRadius: 10,
+                          background: 'linear-gradient(135deg, #4f6ef7, #7c3aed)',
+                          border: 'none', color: '#fff',
+                          fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                          boxShadow: '0 4px 12px rgba(79,110,247,0.35)',
+                          transition: 'all 0.18s', whiteSpace: 'nowrap',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                        onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                      >
+                        <Download size={13} /> Download PDF
+                      </button>
                     </div>
                   </div>
                 )
@@ -221,6 +252,17 @@ export default function EvaluatePage() {
           )}
         </div>
       </div>
+
+      {/* PDF Download Modal */}
+      <PDFDownloadModal
+        open={pdfModalOpen}
+        onClose={() => setPdfModalOpen(false)}
+        title="Download Evaluation PDF"
+        onDownload={filterKey => {
+          const inputData = Object.fromEntries(fields.filter(f => f.key).map(f => [f.key, f.value]))
+          return downloadSingleResultPDF(result, filterKey, inputData)
+        }}
+      />
 
       <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </div>

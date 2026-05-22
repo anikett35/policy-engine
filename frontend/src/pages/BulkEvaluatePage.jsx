@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { getPolicies, runEvaluation } from '../api/endpoints'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { getPolicies, runBulkEvaluation } from '../api/endpoints'
 import toast from 'react-hot-toast'
 import {
   Box, Grid, Card, CardContent, Typography, Button, Select, MenuItem,
@@ -9,8 +9,10 @@ import {
 } from '@mui/material'
 import {
   CloudUpload, TableChart, PlayArrow, Download, CheckCircle, Cancel,
-  Flag, Delete, Error as ErrorIcon, Description, HourglassEmpty,
+  Flag, Delete, Error as ErrorIcon, Description, HourglassEmpty, PictureAsPdf, Stop,
 } from '@mui/icons-material'
+import PDFDownloadModal from '../components/PDFDownloadModal'
+import { downloadBulkResultPDF } from '../utils/pdfExport'
 
 function parseCSV(text) {
   const lines = text.trim().split('\n')
@@ -47,6 +49,7 @@ const DECISION_STYLES = {
 }
 
 export default function BulkEvaluatePage() {
+  const queryClient = useQueryClient()
   const { data: policies = [] } = useQuery({ queryKey: ['policies'], queryFn: getPolicies })
 
   const [selectedPolicy, setSelectedPolicy] = useState('')
@@ -56,7 +59,9 @@ export default function BulkEvaluatePage() {
   const [progress, setProgress] = useState(0)
   const [fileName, setFileName] = useState('')
   const [dragOver, setDragOver] = useState(false)
+  const [pdfModalOpen, setPdfModalOpen] = useState(false)
   const fileRef = useRef()
+  const abortControllerRef = useRef(null)  // tracks active request for cancellation
 
   const handleFile = file => {
     if (!file) return
@@ -80,19 +85,56 @@ export default function BulkEvaluatePage() {
   const handleRunAll = async () => {
     if (!selectedPolicy) { toast.error('Select a policy first'); return }
     if (!rows.length) { toast.error('Upload a file first'); return }
+
+    // Create a fresh AbortController for this run
+    const controller = new AbortController()
+    abortControllerRef.current = controller
     setIsRunning(true); setProgress(0)
-    const updated = [...rows]
-    for (let i = 0; i < updated.length; i++) {
-      const row = { ...updated[i] }
-      delete row._rowIndex; delete row._result; delete row._error
-      try {
-        const result = await runEvaluation({ policy_id: selectedPolicy, input_data: row })
-        updated[i] = { ...updated[i], _result: result, _error: null }
-      } catch { updated[i] = { ...updated[i], _result: null, _error: 'Failed' } }
-      setRows([...updated])
-      setProgress(Math.round(((i + 1) / updated.length) * 100))
+
+    try {
+      const cleanRows = rows.map(row => {
+        const r = { ...row }
+        delete r._rowIndex; delete r._result; delete r._error
+        return r
+      })
+
+      toast.loading(`Evaluating ${rows.length} rows…`, { id: 'bulk-eval' })
+      const response = await runBulkEvaluation(selectedPolicy, cleanRows, controller.signal)
+      toast.dismiss('bulk-eval')
+
+      const updated = rows.map((row, i) => {
+        const res = response.results?.[i]
+        if (!res || res.final_decision === 'error') {
+          return { ...row, _result: null, _error: res?.error || 'Failed' }
+        }
+        return { ...row, _result: res, _error: null }
+      })
+      setRows(updated)
+      setProgress(100)
+      toast.success(`All ${rows.length} rows evaluated! ⚡`)
+      // Refetch dashboard stats and recent evaluations
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['eval-stats'] })
+        queryClient.invalidateQueries({ queryKey: ['evaluations'] })
+        queryClient.refetchQueries({ queryKey: ['eval-stats'] })
+        queryClient.refetchQueries({ queryKey: ['evaluations'] })
+      }, 200)
+    } catch (err) {
+      toast.dismiss('bulk-eval')
+      if (err.code === 'ERR_CANCELED' || err.name === 'CanceledError') {
+        toast('Evaluation stopped.', { icon: '⏹️' })
+      } else {
+        toast.error(err.response?.data?.detail || 'Bulk evaluation failed')
+      }
     }
-    setIsRunning(false); toast.success('All rows evaluated!')
+    setIsRunning(false)
+    abortControllerRef.current = null
+  }
+
+  const handleStop = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
   }
 
   const handleDownload = () => {
@@ -124,7 +166,20 @@ export default function BulkEvaluatePage() {
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
           {rows.length > 0 && evaluated.length > 0 && (
-            <Button variant="contained" startIcon={<Download />} onClick={handleDownload}>Download Results</Button>
+            <>
+              <Button variant="outlined" startIcon={<Download />} onClick={handleDownload}>Download CSV</Button>
+              <Button
+                variant="contained"
+                startIcon={<PictureAsPdf />}
+                onClick={() => setPdfModalOpen(true)}
+                sx={{
+                  background: 'linear-gradient(135deg, #4f6ef7, #7c3aed)',
+                  '&:hover': { background: 'linear-gradient(135deg, #3d5ce5, #6d28d9)' },
+                }}
+              >
+                Download PDF
+              </Button>
+            </>
           )}
           {rows.length > 0 && (
             <Button variant="outlined" startIcon={<Delete />} onClick={clearAll}>Clear</Button>
@@ -225,19 +280,39 @@ export default function BulkEvaluatePage() {
                   })}
                 </Box>
               )}
-              <Button variant="contained" startIcon={isRunning ? <HourglassEmpty sx={{ animation: 'spin 0.7s linear infinite' }} /> : <PlayArrow />}
-                onClick={handleRunAll} disabled={isRunning || !selectedPolicy}
-                sx={{ whiteSpace: 'nowrap' }}>
-                {isRunning ? `Running… ${progress}%` : `Run ${rows.length} Rows`}
+              <Button
+                variant="contained"
+                startIcon={isRunning ? <HourglassEmpty sx={{ animation: 'spin 0.7s linear infinite' }} /> : <PlayArrow />}
+                onClick={handleRunAll}
+                disabled={isRunning || !selectedPolicy}
+                sx={{ whiteSpace: 'nowrap' }}
+              >
+                {isRunning ? 'Evaluating…' : `Run ${rows.length} Rows`}
               </Button>
+              {isRunning && (
+                <Button
+                  variant="contained"
+                  color="error"
+                  startIcon={<Stop />}
+                  onClick={handleStop}
+                  sx={{
+                    whiteSpace: 'nowrap',
+                    background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+                    '&:hover': { background: 'linear-gradient(135deg, #b91c1c, #991b1b)' },
+                    animation: 'pulse 1.5s ease-in-out infinite',
+                  }}
+                >
+                  Stop
+                </Button>
+              )}
             </Box>
             {isRunning && (
               <Box sx={{ mt: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
-                  <Typography variant="caption">Evaluating…</Typography>
-                  <Typography variant="caption">{evaluated.length} / {rows.length}</Typography>
+                  <Typography variant="caption">Sending all rows to server for fast evaluation…</Typography>
+                  <Typography variant="caption">{rows.length} rows</Typography>
                 </Box>
-                <LinearProgress variant="determinate" value={progress} />
+                <LinearProgress variant={progress === 100 ? 'determinate' : 'indeterminate'} value={progress} />
               </Box>
             )}
           </CardContent>
@@ -293,6 +368,18 @@ export default function BulkEvaluatePage() {
           </Table>
         </TableContainer>
       )}
+
+      {/* PDF Download Modal */}
+      <PDFDownloadModal
+        open={pdfModalOpen}
+        onClose={() => setPdfModalOpen(false)}
+        title="Download Bulk Results PDF"
+        onDownload={filterKey => {
+          const policyName = policies.find(p => p.id === selectedPolicy)?.name || ''
+          return downloadBulkResultPDF(rows, filterKey, headers, policyName, true)
+        }}
+      />
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } } @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,0.5)} 50%{box-shadow:0 0 0 8px rgba(220,38,38,0)} }`}</style>
     </Box>
   )
 }

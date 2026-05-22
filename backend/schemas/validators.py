@@ -290,3 +290,19 @@ class GeneratePolicySchema(BaseModel):
         }
     }
 
+
+
+# -- Bulk Evaluation Schema --
+
+class BulkEvaluateSchema(BaseModel):
+    policy_id: str = Field(..., description="ID of the policy to evaluate against")
+    rows: List[Dict[str, Any]] = Field(..., description="List of input data rows to evaluate in bulk")
+
+    @field_validator("rows")
+    @classmethod
+    def validate_rows(cls, v):
+        if not v:
+            raise ValueError("rows must not be empty.")
+        if len(v) > 5000:
+            raise ValueError("Cannot evaluate more than 5000 rows at once.")
+        return v

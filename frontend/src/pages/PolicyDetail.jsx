@@ -281,6 +281,8 @@ export default function PolicyDetail() {
                 <Grid item xs={12} sm={4}><TextField label="Priority" type="number" fullWidth InputProps={{ inputProps: { min: 1 } }} value={form.priority} onChange={e => setForm(f => ({ ...f, priority: parseInt(e.target.value) }))} /></Grid>
               </Grid>
 
+              <TextField label="Description" required fullWidth multiline rows={2} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Describe what this rule does (minimum 10 characters)" helperText={form.description.length < 10 ? `${form.description.length}/10 characters minimum` : ''} />
+
               <Grid container spacing={2} alignItems="center">
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle2" sx={{ mb: 0.75 }}>Logic Mode</Typography>
@@ -344,7 +346,7 @@ export default function PolicyDetail() {
               </Box>
 
               <Box sx={{ display: 'flex', gap: 1, pt: 0.5 }}>
-                <Button type="submit" variant="contained" disabled={createMut.isPending} startIcon={createMut.isPending ? <CircularProgress size={14} color="inherit" /> : <Add />}>
+                <Button type="submit" variant="contained" disabled={createMut.isPending || form.name.length < 3 || form.description.length < 10} startIcon={createMut.isPending ? <CircularProgress size={14} color="inherit" /> : <Add />}>
                   {createMut.isPending ? 'Creating…' : 'Create Rule'}
                 </Button>
                 <Button variant="outlined" onClick={() => setShowForm(false)}>Cancel</Button>
